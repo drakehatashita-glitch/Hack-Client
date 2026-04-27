@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "shieldmacemod",
+  "version": "${version}",
+  "name": "Shield Mace Mod",
+  "description": "Auto shield-break with axe then combo with mace (density preferred over breach).",
+  "authors": [],
+  "contact": {},
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.shieldmacemod.ShieldMaceMod"
+    ]
+  },
+  "mixins": [
+    "shieldmacemod.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "~1.21.1",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}
