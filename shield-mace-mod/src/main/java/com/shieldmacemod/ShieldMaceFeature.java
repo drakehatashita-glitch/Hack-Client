@@ -25,17 +25,31 @@ public class ShieldMaceFeature {
 
     private boolean enabled = false;
 
-    private enum State { IDLE, AXE_SWUNG, WAITING_FOR_MACE }
+    private enum State {
+        IDLE,
+        // Auto-combo states
+        AXE_SWUNG,
+        WAITING_FOR_MACE,
+        // Click-triggered shield-break states
+        SHIELD_BREAK_AXE_SWUNG
+    }
 
-    private State state = State.IDLE;
-    private int delayTimer = 0;
-    private int cooldownTimer = 0;
+    private State state       = State.IDLE;
+    private int   delayTimer  = 0;
+    private int   cooldownTimer = 0;
+
+    // Slot to restore after a click-triggered shield break
+    private int previousSlot  = 0;
+
+    // Edge-detection for attack click (avoids consuming the key event)
+    private boolean wasAttackPressed = false;
 
     public void toggle(MinecraftClient client) {
         enabled = !enabled;
-        state = State.IDLE;
-        delayTimer = 0;
+        state         = State.IDLE;
+        delayTimer    = 0;
         cooldownTimer = 0;
+        wasAttackPressed = false;
 
         if (client.player != null) {
             String msg = enabled ? "Shield Mace Combo: ON" : "Shield Mace Combo: OFF";
@@ -47,27 +61,50 @@ public class ShieldMaceFeature {
         if (!enabled) return;
         if (client.player == null || client.world == null || client.interactionManager == null) return;
 
+        // ── Click edge-detection (observe only — does NOT consume the key event) ──
+        boolean isAttackPressed = client.options.attackKey.isPressed();
+        boolean clickedThisTick = isAttackPressed && !wasAttackPressed;
+        wasAttackPressed = isAttackPressed;
+
         if (cooldownTimer > 0) {
             cooldownTimer--;
             return;
         }
 
         switch (state) {
-            case IDLE          -> handleIdle(client);
-            case AXE_SWUNG     -> {
+            case IDLE -> handleIdle(client, clickedThisTick);
+            case AXE_SWUNG -> {
                 if (delayTimer > 0) delayTimer--;
                 else state = State.WAITING_FOR_MACE;
             }
-            case WAITING_FOR_MACE -> handleMaceSwing(client);
+            case WAITING_FOR_MACE        -> handleMaceSwing(client);
+            case SHIELD_BREAK_AXE_SWUNG  -> handleShieldBreakReturn(client);
         }
     }
 
-    // ── Idle: find target, equip axe, swing (disables shield) ─────────────────
+    // ── Idle: check for click-on-shield first, then auto-combo ────────────────
 
-    private void handleIdle(MinecraftClient client) {
+    private void handleIdle(MinecraftClient client, boolean clickedThisTick) {
         PlayerEntity target = getLookedAtPlayer(client);
         if (target == null) return;
 
+        // Priority 1: if the user clicked AND target is actively blocking → axe swap-and-return
+        if (clickedThisTick && target.isBlocking()) {
+            int axeSlot = findAxeSlot(client);
+            if (axeSlot != -1) {
+                previousSlot = client.player.getInventory().getSelectedSlot();
+                // Only swap if we're not already on an axe
+                client.player.getInventory().setSelectedSlot(axeSlot);
+                client.interactionManager.attackEntity(client.player, target);
+                client.player.swingHand(Hand.MAIN_HAND);
+
+                state      = State.SHIELD_BREAK_AXE_SWUNG;
+                delayTimer = SWAP_DELAY_TICKS;
+                return;
+            }
+        }
+
+        // Priority 2: auto-combo (fires automatically when looking at any player)
         int axeSlot = findAxeSlot(client);
         if (axeSlot == -1) return;
 
@@ -75,11 +112,11 @@ public class ShieldMaceFeature {
         client.interactionManager.attackEntity(client.player, target);
         client.player.swingHand(Hand.MAIN_HAND);
 
-        state = State.AXE_SWUNG;
+        state      = State.AXE_SWUNG;
         delayTimer = SWAP_DELAY_TICKS;
     }
 
-    // ── After delay: equip best mace, swing ───────────────────────────────────
+    // ── Auto-combo: after delay equip best mace and swing ─────────────────────
 
     private void handleMaceSwing(MinecraftClient client) {
         PlayerEntity target = getLookedAtPlayer(client);
@@ -98,15 +135,27 @@ public class ShieldMaceFeature {
         client.interactionManager.attackEntity(client.player, target);
         client.player.swingHand(Hand.MAIN_HAND);
 
-        state = State.IDLE;
+        state         = State.IDLE;
+        cooldownTimer = COMBO_COOLDOWN_TICKS;
+    }
+
+    // ── Click-shield-break: after delay swap back to previous slot ─────────────
+
+    private void handleShieldBreakReturn(MinecraftClient client) {
+        if (delayTimer > 0) {
+            delayTimer--;
+            return;
+        }
+
+        // Swap back to the item the player had before
+        client.player.getInventory().setSelectedSlot(previousSlot);
+
+        state         = State.IDLE;
         cooldownTimer = COMBO_COOLDOWN_TICKS;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
 
-    /**
-     * Returns the player the local player is looking at via crosshair, or null.
-     */
     private PlayerEntity getLookedAtPlayer(MinecraftClient client) {
         if (client.crosshairTarget == null) return null;
         if (client.crosshairTarget.getType() != HitResult.Type.ENTITY) return null;
@@ -118,10 +167,6 @@ public class ShieldMaceFeature {
         return null;
     }
 
-    /**
-     * Finds an axe in hotbar slots 0-8.
-     * Stays on current slot if it is already an axe.
-     */
     private int findAxeSlot(MinecraftClient client) {
         int current = client.player.getInventory().getSelectedSlot();
         if (client.player.getInventory().getStack(current).getItem() instanceof AxeItem) {
@@ -133,10 +178,6 @@ public class ShieldMaceFeature {
         return -1;
     }
 
-    /**
-     * Finds the best mace in hotbar slots 0-8.
-     * Priority: density enchantment > breach enchantment > plain mace.
-     */
     private int findBestMaceSlot(MinecraftClient client) {
         int densitySlot   = -1;
         int breachSlot    = -1;
