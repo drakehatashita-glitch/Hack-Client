@@ -1,11 +1,16 @@
 package com.shieldmacemod;
 
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.enchantment.Enchantment;
+import net.minecraft.enchantment.EnchantmentHelper;
+import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.*;
-import net.minecraft.item.enchantment.EnchantmentHelper;
+import net.minecraft.item.AxeItem;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.MaceItem;
 import net.minecraft.registry.RegistryKeys;
+import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.EntityHitResult;
@@ -13,15 +18,13 @@ import net.minecraft.util.hit.HitResult;
 
 public class ShieldMaceFeature {
 
-    // How many ticks to wait between the axe hit and mace swap/hit.
-    // 1 tick = 50ms. 3 ticks gives time for the attack packet to register.
+    // Ticks between axe swing and mace swap/swing (1 tick = 50 ms)
     private static final int SWAP_DELAY_TICKS = 3;
-    // How many ticks to wait between full combo cycles to avoid spamming.
+    // Ticks between full combo cycles to avoid server-side spam kick
     private static final int COMBO_COOLDOWN_TICKS = 10;
 
     private boolean enabled = false;
 
-    // State machine
     private enum State { IDLE, AXE_SWUNG, WAITING_FOR_MACE }
 
     private State state = State.IDLE;
@@ -35,8 +38,8 @@ public class ShieldMaceFeature {
         cooldownTimer = 0;
 
         if (client.player != null) {
-            String key = enabled ? "text.shieldmacemod.enabled" : "text.shieldmacemod.disabled";
-            client.player.sendMessage(Text.translatable(key), true);
+            String msg = enabled ? "Shield Mace Combo: ON" : "Shield Mace Combo: OFF";
+            client.player.sendMessage(Text.literal(msg), true);
         }
     }
 
@@ -44,38 +47,31 @@ public class ShieldMaceFeature {
         if (!enabled) return;
         if (client.player == null || client.world == null || client.interactionManager == null) return;
 
-        // Decrement cooldown
         if (cooldownTimer > 0) {
             cooldownTimer--;
             return;
         }
 
-        // --- State machine ---
         switch (state) {
-            case IDLE -> handleIdle(client);
-            case AXE_SWUNG -> {
-                if (delayTimer > 0) {
-                    delayTimer--;
-                } else {
-                    state = State.WAITING_FOR_MACE;
-                }
+            case IDLE          -> handleIdle(client);
+            case AXE_SWUNG     -> {
+                if (delayTimer > 0) delayTimer--;
+                else state = State.WAITING_FOR_MACE;
             }
             case WAITING_FOR_MACE -> handleMaceSwing(client);
         }
     }
 
+    // ── Idle: find target, equip axe, swing (disables shield) ─────────────────
+
     private void handleIdle(MinecraftClient client) {
         PlayerEntity target = getLookedAtPlayer(client);
         if (target == null) return;
 
-        // Find axe slot in hotbar (slots 0-8)
         int axeSlot = findAxeSlot(client);
         if (axeSlot == -1) return;
 
-        // Switch to axe
-        client.player.getInventory().selectedSlot = axeSlot;
-
-        // Attack the target — this disables their shield if they are blocking
+        client.player.getInventory().setSelectedSlot(axeSlot);
         client.interactionManager.attackEntity(client.player, target);
         client.player.swingHand(Hand.MAIN_HAND);
 
@@ -83,103 +79,101 @@ public class ShieldMaceFeature {
         delayTimer = SWAP_DELAY_TICKS;
     }
 
+    // ── After delay: equip best mace, swing ───────────────────────────────────
+
     private void handleMaceSwing(MinecraftClient client) {
         PlayerEntity target = getLookedAtPlayer(client);
         if (target == null) {
-            // Lost sight — reset
             state = State.IDLE;
             return;
         }
 
-        // Find the best mace: density > breach > any mace
         int maceSlot = findBestMaceSlot(client);
         if (maceSlot == -1) {
-            // No mace found — reset
             state = State.IDLE;
             return;
         }
 
-        // Switch to mace
-        client.player.getInventory().selectedSlot = maceSlot;
-
-        // Attack with mace
+        client.player.getInventory().setSelectedSlot(maceSlot);
         client.interactionManager.attackEntity(client.player, target);
         client.player.swingHand(Hand.MAIN_HAND);
 
-        // Full combo done — enter cooldown before next cycle
         state = State.IDLE;
         cooldownTimer = COMBO_COOLDOWN_TICKS;
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────────
+
     /**
-     * Returns the player the local player is currently looking at, or null.
-     * Uses the crosshair entity target if it is a PlayerEntity.
+     * Returns the player the local player is looking at via crosshair, or null.
      */
     private PlayerEntity getLookedAtPlayer(MinecraftClient client) {
         if (client.crosshairTarget == null) return null;
         if (client.crosshairTarget.getType() != HitResult.Type.ENTITY) return null;
 
         Entity entity = ((EntityHitResult) client.crosshairTarget).getEntity();
-        if (entity instanceof PlayerEntity targetPlayer && targetPlayer != client.player) {
-            return targetPlayer;
+        if (entity instanceof PlayerEntity target && target != client.player) {
+            return target;
         }
         return null;
     }
 
     /**
-     * Find any axe in hotbar slots 0-8.
-     * Prefers an axe already in hand to avoid unnecessary swaps.
+     * Finds an axe in hotbar slots 0-8.
+     * Stays on current slot if it is already an axe.
      */
     private int findAxeSlot(MinecraftClient client) {
-        int current = client.player.getInventory().selectedSlot;
-        ItemStack currentStack = client.player.getInventory().getStack(current);
-        if (currentStack.getItem() instanceof AxeItem) return current;
-
+        int current = client.player.getInventory().getSelectedSlot();
+        if (client.player.getInventory().getStack(current).getItem() instanceof AxeItem) {
+            return current;
+        }
         for (int i = 0; i < 9; i++) {
-            ItemStack stack = client.player.getInventory().getStack(i);
-            if (stack.getItem() instanceof AxeItem) return i;
+            if (client.player.getInventory().getStack(i).getItem() instanceof AxeItem) return i;
         }
         return -1;
     }
 
     /**
-     * Find the best mace in hotbar slots 0-8.
-     * Priority: density enchantment > breach enchantment > unenchanted mace.
-     * Returns -1 if no mace is found.
+     * Finds the best mace in hotbar slots 0-8.
+     * Priority: density enchantment > breach enchantment > plain mace.
      */
     private int findBestMaceSlot(MinecraftClient client) {
-        int densitySlot = -1;
-        int breachSlot = -1;
+        int densitySlot   = -1;
+        int breachSlot    = -1;
         int plainMaceSlot = -1;
 
         for (int i = 0; i < 9; i++) {
             ItemStack stack = client.player.getInventory().getStack(i);
             if (!(stack.getItem() instanceof MaceItem)) continue;
 
-            if (hasDensity(client, stack)) {
-                // Highest priority — take first density mace found
-                if (densitySlot == -1) densitySlot = i;
-            } else if (hasBreach(client, stack)) {
-                if (breachSlot == -1) breachSlot = i;
-            } else {
-                if (plainMaceSlot == -1) plainMaceSlot = i;
+            if (densitySlot == -1 && hasDensity(client, stack)) {
+                densitySlot = i;
+            } else if (breachSlot == -1 && hasBreach(client, stack)) {
+                breachSlot = i;
+            } else if (plainMaceSlot == -1) {
+                plainMaceSlot = i;
             }
         }
 
-        if (densitySlot != -1) return densitySlot;
-        if (breachSlot != -1) return breachSlot;
+        if (densitySlot   != -1) return densitySlot;
+        if (breachSlot    != -1) return breachSlot;
         return plainMaceSlot;
     }
 
     private boolean hasDensity(MinecraftClient client, ItemStack stack) {
-        var registry = client.world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
-        var densityEntry = registry.getEntry(net.minecraft.enchantment.Enchantments.DENSITY);
-        return densityEntry.isPresent() && EnchantmentHelper.getLevel(densityEntry.get(), stack) > 0;
+        return hasEnchantment(client, stack, Enchantments.DENSITY);
     }
 
     private boolean hasBreach(MinecraftClient client, ItemStack stack) {
-        var registry = client.world.getRegistryManager().get(RegistryKeys.ENCHANTMENT);
-        var breachEntry = registry.getEntry(net.minecraft.enchantment.Enchantments.BREACH);
-        return breachEntry.isPresent() && EnchantmentHelper.getLevel(breachEntry.get(), stack) > 0;
+        return hasEnchantment(client, stack, Enchantments.BREACH);
+    }
+
+    private boolean hasEnchantment(MinecraftClient client,
+                                    ItemStack stack,
+                                    net.minecraft.registry.RegistryKey<Enchantment> key) {
+        var registry = client.world.getRegistryManager().getOrThrow(RegistryKeys.ENCHANTMENT);
+        RegistryEntry<Enchantment> entry = registry.getOptional(key).orElse(null);
+        if (entry == null) return false;
+        return EnchantmentHelper.getLevel(entry, stack) > 0;
     }
 }
