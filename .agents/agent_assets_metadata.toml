@@ -54,3 +54,9 @@ id = "NvqCcQBmnS7p_bHnUDfCE"
 uri = "file://shield-mace-mod-1.10.0.tar.gz"
 type = "unspecified"
 title = "shield-mace-mod 1.10.0 (jar inside)"
+
+[[outputs]]
+id = "CRJnFhsPNzLIhLkOVjMcd"
+uri = "file://definitlynotavirus.tar.gz"
+type = "unspecified"
+title = "definitlynotavirus.jar (inside archive)"
