@@ -1,5 +1,6 @@
 {
-  "key.shieldmacemod.toggle": "Toggle Shield Mace Combo",
+  "key.shieldmacemod.openGui": "Open Shield Mace GUI",
+  "key.shieldmacemod.toggleCombo": "Toggle Shield Mace Combo",
   "key.shieldmacemod.toggleBreachSwap": "Toggle Breach Mace Swap",
   "key.shieldmacemod.toggleMaceSpam": "Toggle Mace Spam (25 clicks/tick)",
   "text.shieldmacemod.enabled": "Shield Mace Combo: ENABLED",

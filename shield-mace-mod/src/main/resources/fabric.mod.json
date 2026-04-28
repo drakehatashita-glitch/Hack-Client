@@ -3,7 +3,7 @@
   "id": "shieldmacemod",
   "version": "${version}",
   "name": "Shield Mace Mod",
-  "description": "Auto shield-break with axe then combo with mace (density preferred over breach), a click-triggered breach-mace swap on any mob or player, and a mace-spam mode that fires 25 attacks per tick at a player while holding a mace.",
+  "description": "Three combat features (axe+mace combo, breach-mace swap on attack, mace spam) configured through an in-game GUI opened with Right Shift. Each feature has a togglable on/off state, a rebindable shortcut key, and tunable settings.",
   "authors": [],
   "contact": {},
   "license": "MIT",

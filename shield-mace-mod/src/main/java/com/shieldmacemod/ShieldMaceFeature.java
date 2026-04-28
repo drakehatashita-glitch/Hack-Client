@@ -19,17 +19,6 @@ import net.minecraft.util.hit.HitResult;
 
 public class ShieldMaceFeature {
 
-    // Ticks between axe swing and mace swap/swing (1 tick = 50 ms)
-    private static final int SWAP_DELAY_TICKS = 3;
-    // Ticks between full combo cycles to avoid server-side spam kick
-    private static final int COMBO_COOLDOWN_TICKS = 10;
-    // Feature 4: clicks fired per tick while mace-spam is active
-    private static final int MACE_SPAM_CLICKS_PER_TICK = 25;
-
-    private boolean enabled = false;            // Feature 1+2: axe/mace auto-combo & shield break
-    private boolean breachSwapEnabled = false;  // Feature 3: attack-triggered breach mace swap
-    private boolean maceSpamEnabled = false;    // Feature 4: 25 clicks/tick while holding a mace + looking at player
-
     private enum State {
         IDLE,
         // Auto-combo states
@@ -41,35 +30,37 @@ public class ShieldMaceFeature {
         BREACH_SWAP_RETURN
     }
 
-    private State state       = State.IDLE;
-    private int   delayTimer  = 0;
-    private int   cooldownTimer = 0;
+    private final ShieldMaceSettings s = ShieldMaceSettings.INSTANCE;
+
+    private State state           = State.IDLE;
+    private int   delayTimer      = 0;
+    private int   cooldownTimer   = 0;
 
     // Slot to restore after a click-triggered swap (shield break or breach swap)
-    private int previousSlot  = 0;
+    private int previousSlot      = 0;
 
     // Edge-detection for attack click (avoids consuming the key event)
     private boolean wasAttackPressed = false;
 
-    public void toggle(MinecraftClient client) {
-        enabled = !enabled;
+    public void toggleCombo(MinecraftClient client) {
+        s.comboEnabled = !s.comboEnabled;
         resetRuntimeState();
-        announce(client, enabled ? "Shield Mace Combo: ON" : "Shield Mace Combo: OFF");
+        announce(client, s.comboEnabled ? "Shield Mace Combo: ON" : "Shield Mace Combo: OFF");
     }
 
     public void toggleBreachSwap(MinecraftClient client) {
-        breachSwapEnabled = !breachSwapEnabled;
+        s.breachSwapEnabled = !s.breachSwapEnabled;
         resetRuntimeState();
-        announce(client, breachSwapEnabled ? "Breach Mace Swap: ON" : "Breach Mace Swap: OFF");
+        announce(client, s.breachSwapEnabled ? "Breach Mace Swap: ON" : "Breach Mace Swap: OFF");
     }
 
     public void toggleMaceSpam(MinecraftClient client) {
-        maceSpamEnabled = !maceSpamEnabled;
+        s.maceSpamEnabled = !s.maceSpamEnabled;
         resetRuntimeState();
-        announce(client, maceSpamEnabled ? "Mace Spam: ON" : "Mace Spam: OFF");
+        announce(client, s.maceSpamEnabled ? "Mace Spam: ON" : "Mace Spam: OFF");
     }
 
-    private void resetRuntimeState() {
+    public void resetRuntimeState() {
         state            = State.IDLE;
         delayTimer       = 0;
         cooldownTimer    = 0;
@@ -83,7 +74,7 @@ public class ShieldMaceFeature {
     }
 
     public void tick(MinecraftClient client) {
-        if (!enabled && !breachSwapEnabled && !maceSpamEnabled) return;
+        if (!s.comboEnabled && !s.breachSwapEnabled && !s.maceSpamEnabled) return;
         if (client.player == null || client.world == null || client.interactionManager == null) return;
 
         // ── Click edge-detection (observe only — does NOT consume the key event) ──
@@ -91,8 +82,8 @@ public class ShieldMaceFeature {
         boolean clickedThisTick = isAttackPressed && !wasAttackPressed;
         wasAttackPressed = isAttackPressed;
 
-        // ── Feature 4: mace-spam runs every tick, independent of state machine ──
-        if (maceSpamEnabled) {
+        // ── Feature 4 (mace spam): runs every tick, independent of state machine ──
+        if (s.maceSpamEnabled) {
             tickMaceSpam(client);
         }
 
@@ -108,8 +99,8 @@ public class ShieldMaceFeature {
                 else state = State.WAITING_FOR_MACE;
             }
             case WAITING_FOR_MACE        -> handleMaceSwing(client);
-            case SHIELD_BREAK_AXE_SWUNG  -> handleSwapBackReturn(client);
-            case BREACH_SWAP_RETURN      -> handleSwapBackReturn(client);
+            case SHIELD_BREAK_AXE_SWUNG  -> handleSwapBackReturn(client, s.comboCooldownTicks);
+            case BREACH_SWAP_RETURN      -> handleSwapBackReturn(client, s.breachSwapCooldownTicks);
         }
     }
 
@@ -117,13 +108,12 @@ public class ShieldMaceFeature {
 
     private void handleIdle(MinecraftClient client, boolean clickedThisTick) {
         // Priority 1: breach-mace swap on any attack against a mob or player
-        if (breachSwapEnabled && clickedThisTick) {
+        if (s.breachSwapEnabled && clickedThisTick) {
             LivingEntity livingTarget = getLookedAtLiving(client);
             if (livingTarget != null) {
                 int breachSlot  = findBreachMaceSlot(client);
                 int currentSlot = client.player.getInventory().getSelectedSlot();
 
-                // Only swap if we're not already holding the breach mace
                 if (breachSlot != -1 && breachSlot != currentSlot) {
                     previousSlot = currentSlot;
                     client.player.getInventory().setSelectedSlot(breachSlot);
@@ -131,14 +121,14 @@ public class ShieldMaceFeature {
                     client.player.swingHand(Hand.MAIN_HAND);
 
                     state      = State.BREACH_SWAP_RETURN;
-                    delayTimer = SWAP_DELAY_TICKS;
+                    delayTimer = s.breachSwapDelayTicks;
                     return;
                 }
             }
         }
 
-        // Features 1 & 2 are gated by the original toggle
-        if (!enabled) return;
+        // Features 1 & 2 are gated by the combo toggle
+        if (!s.comboEnabled) return;
 
         PlayerEntity target = getLookedAtPlayer(client);
         if (target == null) return;
@@ -148,13 +138,12 @@ public class ShieldMaceFeature {
             int axeSlot = findAxeSlot(client);
             if (axeSlot != -1) {
                 previousSlot = client.player.getInventory().getSelectedSlot();
-                // Only swap if we're not already on an axe
                 client.player.getInventory().setSelectedSlot(axeSlot);
                 client.interactionManager.attackEntity(client.player, target);
                 client.player.swingHand(Hand.MAIN_HAND);
 
                 state      = State.SHIELD_BREAK_AXE_SWUNG;
-                delayTimer = SWAP_DELAY_TICKS;
+                delayTimer = s.comboSwapDelayTicks;
                 return;
             }
         }
@@ -168,7 +157,7 @@ public class ShieldMaceFeature {
         client.player.swingHand(Hand.MAIN_HAND);
 
         state      = State.AXE_SWUNG;
-        delayTimer = SWAP_DELAY_TICKS;
+        delayTimer = s.comboSwapDelayTicks;
     }
 
     // ── Auto-combo: after delay equip best mace and swing ─────────────────────
@@ -191,40 +180,37 @@ public class ShieldMaceFeature {
         client.player.swingHand(Hand.MAIN_HAND);
 
         state         = State.IDLE;
-        cooldownTimer = COMBO_COOLDOWN_TICKS;
+        cooldownTimer = s.comboCooldownTicks;
     }
 
     // ── Click-shield-break / breach-swap: after delay swap back to previous slot ──
 
-    private void handleSwapBackReturn(MinecraftClient client) {
+    private void handleSwapBackReturn(MinecraftClient client, int cooldownTicks) {
         if (delayTimer > 0) {
             delayTimer--;
             return;
         }
 
-        // Swap back to the item the player had before
         client.player.getInventory().setSelectedSlot(previousSlot);
 
         state         = State.IDLE;
-        cooldownTimer = COMBO_COOLDOWN_TICKS;
+        cooldownTimer = cooldownTicks;
     }
 
-    // ── Feature 4: mace spam (25 clicks per tick on a player target) ──────────
+    // ── Feature 4: mace spam (N clicks per tick on a player target) ───────────
 
     private void tickMaceSpam(MinecraftClient client) {
-        // Must be holding a mace in the main hand
         ItemStack mainHand = client.player.getInventory().getStack(
                 client.player.getInventory().getSelectedSlot());
         if (!(mainHand.getItem() instanceof MaceItem)) return;
 
-        // Must be looking at another player
         PlayerEntity target = getLookedAtPlayer(client);
         if (target == null) return;
 
-        for (int i = 0; i < MACE_SPAM_CLICKS_PER_TICK; i++) {
+        int n = Math.max(1, s.maceSpamClicksPerTick);
+        for (int i = 0; i < n; i++) {
             client.interactionManager.attackEntity(client.player, target);
         }
-        // Single swing animation for the burst, regardless of click count
         client.player.swingHand(Hand.MAIN_HAND);
     }
 

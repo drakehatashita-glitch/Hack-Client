@@ -8,22 +8,34 @@ import net.minecraft.client.util.InputUtil;
 
 public class ShieldMaceMod implements ClientModInitializer {
 
-    public static KeyBinding toggleKey;
+    public static KeyBinding openGuiKey;
+    public static KeyBinding toggleComboKey;
     public static KeyBinding toggleBreachSwapKey;
     public static KeyBinding toggleMaceSpamKey;
 
+    public static ShieldMaceFeature feature;
+
     // GLFW key codes (inlined to avoid LWJGL compile-time dependency)
+    private static final int GLFW_KEY_UNKNOWN       = -1;
     private static final int GLFW_KEY_RIGHT_SHIFT   = 344;
     private static final int GLFW_KEY_RIGHT_CONTROL = 345;
     private static final int GLFW_KEY_RIGHT_ALT     = 346;
 
     @Override
     public void onInitializeClient() {
-        // Appears in Options → Controls → Shield Mace Mod and is rebindable
-        toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.shieldmacemod.toggle",
+        // Right Shift now opens the in-game configuration GUI
+        openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.shieldmacemod.openGui",
                 InputUtil.Type.KEYSYM,
                 GLFW_KEY_RIGHT_SHIFT,
+                KeyBinding.Category.MISC
+        ));
+
+        // Per-feature shortcut toggles (rebindable in vanilla controls AND in the GUI)
+        toggleComboKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.shieldmacemod.toggleCombo",
+                InputUtil.Type.KEYSYM,
+                GLFW_KEY_UNKNOWN,
                 KeyBinding.Category.MISC
         ));
 
@@ -41,11 +53,14 @@ public class ShieldMaceMod implements ClientModInitializer {
                 KeyBinding.Category.MISC
         ));
 
-        ShieldMaceFeature feature = new ShieldMaceFeature();
+        feature = new ShieldMaceFeature();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (toggleKey.wasPressed()) {
-                feature.toggle(client);
+            while (openGuiKey.wasPressed()) {
+                client.setScreen(new ShieldMaceGui());
+            }
+            while (toggleComboKey.wasPressed()) {
+                feature.toggleCombo(client);
             }
             while (toggleBreachSwapKey.wasPressed()) {
                 feature.toggleBreachSwap(client);
