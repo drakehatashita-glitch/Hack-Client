@@ -1,5 +1,8 @@
 {
   "key.shieldmacemod.toggle": "Toggle Shield Mace Combo",
+  "key.shieldmacemod.toggleBreachSwap": "Toggle Breach Mace Swap",
   "text.shieldmacemod.enabled": "Shield Mace Combo: ENABLED",
-  "text.shieldmacemod.disabled": "Shield Mace Combo: DISABLED"
+  "text.shieldmacemod.disabled": "Shield Mace Combo: DISABLED",
+  "text.shieldmacemod.breachSwap.enabled": "Breach Mace Swap: ENABLED",
+  "text.shieldmacemod.breachSwap.disabled": "Breach Mace Swap: DISABLED"
 }

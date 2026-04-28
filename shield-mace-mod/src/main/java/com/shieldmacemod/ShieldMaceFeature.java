@@ -5,6 +5,7 @@ import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.ItemStack;
@@ -23,7 +24,8 @@ public class ShieldMaceFeature {
     // Ticks between full combo cycles to avoid server-side spam kick
     private static final int COMBO_COOLDOWN_TICKS = 10;
 
-    private boolean enabled = false;
+    private boolean enabled = false;            // Feature 1+2: axe/mace auto-combo & shield break
+    private boolean breachSwapEnabled = false;  // Feature 3: attack-triggered breach mace swap
 
     private enum State {
         IDLE,
@@ -31,14 +33,16 @@ public class ShieldMaceFeature {
         AXE_SWUNG,
         WAITING_FOR_MACE,
         // Click-triggered shield-break states
-        SHIELD_BREAK_AXE_SWUNG
+        SHIELD_BREAK_AXE_SWUNG,
+        // Breach-swap states
+        BREACH_SWAP_RETURN
     }
 
     private State state       = State.IDLE;
     private int   delayTimer  = 0;
     private int   cooldownTimer = 0;
 
-    // Slot to restore after a click-triggered shield break
+    // Slot to restore after a click-triggered swap (shield break or breach swap)
     private int previousSlot  = 0;
 
     // Edge-detection for attack click (avoids consuming the key event)
@@ -46,19 +50,31 @@ public class ShieldMaceFeature {
 
     public void toggle(MinecraftClient client) {
         enabled = !enabled;
-        state         = State.IDLE;
-        delayTimer    = 0;
-        cooldownTimer = 0;
-        wasAttackPressed = false;
+        resetRuntimeState();
+        announce(client, enabled ? "Shield Mace Combo: ON" : "Shield Mace Combo: OFF");
+    }
 
+    public void toggleBreachSwap(MinecraftClient client) {
+        breachSwapEnabled = !breachSwapEnabled;
+        resetRuntimeState();
+        announce(client, breachSwapEnabled ? "Breach Mace Swap: ON" : "Breach Mace Swap: OFF");
+    }
+
+    private void resetRuntimeState() {
+        state            = State.IDLE;
+        delayTimer       = 0;
+        cooldownTimer    = 0;
+        wasAttackPressed = false;
+    }
+
+    private void announce(MinecraftClient client, String msg) {
         if (client.player != null) {
-            String msg = enabled ? "Shield Mace Combo: ON" : "Shield Mace Combo: OFF";
             client.player.sendMessage(Text.literal(msg), true);
         }
     }
 
     public void tick(MinecraftClient client) {
-        if (!enabled) return;
+        if (!enabled && !breachSwapEnabled) return;
         if (client.player == null || client.world == null || client.interactionManager == null) return;
 
         // ── Click edge-detection (observe only — does NOT consume the key event) ──
@@ -78,17 +94,42 @@ public class ShieldMaceFeature {
                 else state = State.WAITING_FOR_MACE;
             }
             case WAITING_FOR_MACE        -> handleMaceSwing(client);
-            case SHIELD_BREAK_AXE_SWUNG  -> handleShieldBreakReturn(client);
+            case SHIELD_BREAK_AXE_SWUNG  -> handleSwapBackReturn(client);
+            case BREACH_SWAP_RETURN      -> handleSwapBackReturn(client);
         }
     }
 
-    // ── Idle: check for click-on-shield first, then auto-combo ────────────────
+    // ── Idle: breach-swap → click-on-shield → auto-combo ──────────────────────
 
     private void handleIdle(MinecraftClient client, boolean clickedThisTick) {
+        // Priority 1: breach-mace swap on any attack against a mob or player
+        if (breachSwapEnabled && clickedThisTick) {
+            LivingEntity livingTarget = getLookedAtLiving(client);
+            if (livingTarget != null) {
+                int breachSlot  = findBreachMaceSlot(client);
+                int currentSlot = client.player.getInventory().getSelectedSlot();
+
+                // Only swap if we're not already holding the breach mace
+                if (breachSlot != -1 && breachSlot != currentSlot) {
+                    previousSlot = currentSlot;
+                    client.player.getInventory().setSelectedSlot(breachSlot);
+                    client.interactionManager.attackEntity(client.player, livingTarget);
+                    client.player.swingHand(Hand.MAIN_HAND);
+
+                    state      = State.BREACH_SWAP_RETURN;
+                    delayTimer = SWAP_DELAY_TICKS;
+                    return;
+                }
+            }
+        }
+
+        // Features 1 & 2 are gated by the original toggle
+        if (!enabled) return;
+
         PlayerEntity target = getLookedAtPlayer(client);
         if (target == null) return;
 
-        // Priority 1: if the user clicked AND target is actively blocking → axe swap-and-return
+        // Priority 2: if the user clicked AND target is actively blocking → axe swap-and-return
         if (clickedThisTick && target.isBlocking()) {
             int axeSlot = findAxeSlot(client);
             if (axeSlot != -1) {
@@ -104,7 +145,7 @@ public class ShieldMaceFeature {
             }
         }
 
-        // Priority 2: auto-combo (fires automatically when looking at any player)
+        // Priority 3: auto-combo (fires automatically when looking at any player)
         int axeSlot = findAxeSlot(client);
         if (axeSlot == -1) return;
 
@@ -139,9 +180,9 @@ public class ShieldMaceFeature {
         cooldownTimer = COMBO_COOLDOWN_TICKS;
     }
 
-    // ── Click-shield-break: after delay swap back to previous slot ─────────────
+    // ── Click-shield-break / breach-swap: after delay swap back to previous slot ──
 
-    private void handleShieldBreakReturn(MinecraftClient client) {
+    private void handleSwapBackReturn(MinecraftClient client) {
         if (delayTimer > 0) {
             delayTimer--;
             return;
@@ -155,6 +196,17 @@ public class ShieldMaceFeature {
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
+
+    private LivingEntity getLookedAtLiving(MinecraftClient client) {
+        if (client.crosshairTarget == null) return null;
+        if (client.crosshairTarget.getType() != HitResult.Type.ENTITY) return null;
+
+        Entity entity = ((EntityHitResult) client.crosshairTarget).getEntity();
+        if (entity instanceof LivingEntity living && living != client.player) {
+            return living;
+        }
+        return null;
+    }
 
     private PlayerEntity getLookedAtPlayer(MinecraftClient client) {
         if (client.crosshairTarget == null) return null;
@@ -174,6 +226,14 @@ public class ShieldMaceFeature {
         }
         for (int i = 0; i < 9; i++) {
             if (client.player.getInventory().getStack(i).getItem() instanceof AxeItem) return i;
+        }
+        return -1;
+    }
+
+    private int findBreachMaceSlot(MinecraftClient client) {
+        for (int i = 0; i < 9; i++) {
+            ItemStack stack = client.player.getInventory().getStack(i);
+            if (stack.getItem() instanceof MaceItem && hasBreach(client, stack)) return i;
         }
         return -1;
     }

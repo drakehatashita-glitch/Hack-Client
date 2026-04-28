@@ -9,9 +9,11 @@ import net.minecraft.client.util.InputUtil;
 public class ShieldMaceMod implements ClientModInitializer {
 
     public static KeyBinding toggleKey;
+    public static KeyBinding toggleBreachSwapKey;
 
-    // GLFW_KEY_RIGHT_SHIFT = 344 (inlined to avoid LWJGL compile-time dependency)
-    private static final int GLFW_KEY_RIGHT_SHIFT = 344;
+    // GLFW key codes (inlined to avoid LWJGL compile-time dependency)
+    private static final int GLFW_KEY_RIGHT_SHIFT   = 344;
+    private static final int GLFW_KEY_RIGHT_CONTROL = 345;
 
     @Override
     public void onInitializeClient() {
@@ -23,11 +25,21 @@ public class ShieldMaceMod implements ClientModInitializer {
                 KeyBinding.Category.MISC
         ));
 
+        toggleBreachSwapKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.shieldmacemod.toggleBreachSwap",
+                InputUtil.Type.KEYSYM,
+                GLFW_KEY_RIGHT_CONTROL,
+                KeyBinding.Category.MISC
+        ));
+
         ShieldMaceFeature feature = new ShieldMaceFeature();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (toggleKey.wasPressed()) {
                 feature.toggle(client);
+            }
+            while (toggleBreachSwapKey.wasPressed()) {
+                feature.toggleBreachSwap(client);
             }
             feature.tick(client);
         });
