@@ -61,19 +61,19 @@ public class ShieldMaceFeature {
     public void toggleCombo(MinecraftClient client) {
         s.comboEnabled = !s.comboEnabled;
         resetRuntimeState();
-        announce(client, s.comboEnabled ? "Shield Mace Combo: ON" : "Shield Mace Combo: OFF");
+        announce(client, s.comboEnabled ? "Auto Stun Slam: ON" : "Auto Stun Slam: OFF");
     }
 
     public void toggleBreachSwap(MinecraftClient client) {
         s.breachSwapEnabled = !s.breachSwapEnabled;
         resetRuntimeState();
-        announce(client, s.breachSwapEnabled ? "Breach Mace Swap: ON" : "Breach Mace Swap: OFF");
+        announce(client, s.breachSwapEnabled ? "Breach Swap: ON" : "Breach Swap: OFF");
     }
 
     public void toggleMaceSpam(MinecraftClient client) {
         s.maceSpamEnabled = !s.maceSpamEnabled;
         resetRuntimeState();
-        announce(client, s.maceSpamEnabled ? "Mace Spam: ON" : "Mace Spam: OFF");
+        announce(client, s.maceSpamEnabled ? "Shield Breaker: ON" : "Shield Breaker: OFF");
     }
 
     public void toggleSilentAim(MinecraftClient client) {
@@ -83,12 +83,12 @@ public class ShieldMaceFeature {
 
     public void toggleHeightSmash(MinecraftClient client) {
         s.heightSmashEnabled = !s.heightSmashEnabled;
-        announce(client, s.heightSmashEnabled ? "Height Smash: ON" : "Height Smash: OFF");
+        announce(client, s.heightSmashEnabled ? "Mace Kill: ON" : "Mace Kill: OFF");
     }
 
     public void toggleHitboxExpand(MinecraftClient client) {
         s.hitboxExpandEnabled = !s.hitboxExpandEnabled;
-        announce(client, s.hitboxExpandEnabled ? "Hitbox Expander: ON" : "Hitbox Expander: OFF");
+        announce(client, s.hitboxExpandEnabled ? "Hitboxes: ON" : "Hitboxes: OFF");
     }
 
     public void toggleAutoTotem(MinecraftClient client) {
@@ -528,7 +528,7 @@ public class ShieldMaceFeature {
 
         double fakeFall = packets * dropPerPacket;
         client.player.sendMessage(
-                Text.literal(String.format("Height Smash: faked fd ≈ %.0f blocks", fakeFall)),
+                Text.literal(String.format("Mace Kill: faked fd ≈ %.0f blocks", fakeFall)),
                 true);
     }
 

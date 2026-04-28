@@ -47,7 +47,7 @@ public class PearlInterceptor {
     public void toggle(MinecraftClient client) {
         s.pearlInterceptEnabled = !s.pearlInterceptEnabled;
         resetRuntimeState();
-        announce(client, s.pearlInterceptEnabled ? "Pearl Intercept: ON" : "Pearl Intercept: OFF");
+        announce(client, s.pearlInterceptEnabled ? "Pearl Catch: ON" : "Pearl Catch: OFF");
     }
 
     public void resetRuntimeState() {
@@ -172,7 +172,7 @@ public class PearlInterceptor {
         if (mainHand.getItem() instanceof WindChargeItem) {
             client.interactionManager.interactItem(player, Hand.MAIN_HAND);
             player.swingHand(Hand.MAIN_HAND);
-            announce(client, "Pearl intercept fired");
+            announce(client, "Pearl Catch fired");
         }
 
         player.setYaw(originalYaw);

@@ -49,7 +49,7 @@ public class ShieldMaceGui extends Screen {
     protected void init() {
         if (cards.isEmpty()) {
             cards.add(new FeatureCard(
-                    "Shield Mace Combo",
+                    "Auto Stun Slam",
                     () -> ShieldMaceMod.toggleComboKey,
                     () -> ShieldMaceSettings.INSTANCE.comboEnabled,
                     enabled -> ShieldMaceSettings.INSTANCE.comboEnabled = enabled,
@@ -65,7 +65,7 @@ public class ShieldMaceGui extends Screen {
                     "toggleCombo"
             ));
             cards.add(new FeatureCard(
-                    "Breach Mace Swap",
+                    "Breach Swap",
                     () -> ShieldMaceMod.toggleBreachSwapKey,
                     () -> ShieldMaceSettings.INSTANCE.breachSwapEnabled,
                     enabled -> ShieldMaceSettings.INSTANCE.breachSwapEnabled = enabled,
@@ -81,7 +81,7 @@ public class ShieldMaceGui extends Screen {
                     "toggleBreachSwap"
             ));
             cards.add(new FeatureCard(
-                    "Mace Spam",
+                    "Shield Breaker",
                     () -> ShieldMaceMod.toggleMaceSpamKey,
                     () -> ShieldMaceSettings.INSTANCE.maceSpamEnabled,
                     enabled -> ShieldMaceSettings.INSTANCE.maceSpamEnabled = enabled,
@@ -117,7 +117,7 @@ public class ShieldMaceGui extends Screen {
                     "toggleSilentAim"
             ));
             cards.add(new FeatureCard(
-                    "Hitbox Expander",
+                    "Hitboxes",
                     () -> ShieldMaceMod.toggleHitboxExpandKey,
                     () -> ShieldMaceSettings.INSTANCE.hitboxExpandEnabled,
                     enabled -> ShieldMaceSettings.INSTANCE.hitboxExpandEnabled = enabled,
@@ -130,7 +130,7 @@ public class ShieldMaceGui extends Screen {
                     "toggleHitboxExpand"
             ));
             cards.add(new FeatureCard(
-                    "Auto Totem (offhand)",
+                    "Auto Totem",
                     () -> ShieldMaceMod.toggleAutoTotemKey,
                     () -> ShieldMaceSettings.INSTANCE.autoTotemEnabled,
                     enabled -> ShieldMaceSettings.INSTANCE.autoTotemEnabled = enabled,
@@ -143,7 +143,7 @@ public class ShieldMaceGui extends Screen {
                     "toggleAutoTotem"
             ));
             cards.add(new FeatureCard(
-                    "No Fall Damage",
+                    "No Fall",
                     () -> ShieldMaceMod.toggleNoFallKey,
                     () -> ShieldMaceSettings.INSTANCE.noFallEnabled,
                     enabled -> ShieldMaceSettings.INSTANCE.noFallEnabled = enabled,
@@ -178,7 +178,7 @@ public class ShieldMaceGui extends Screen {
                     "toggleKillAura"
             ));
             cards.add(new FeatureCard(
-                    "Flight (creative-style)",
+                    "Flight",
                     () -> ShieldMaceMod.toggleFlightKey,
                     () -> ShieldMaceSettings.INSTANCE.flightEnabled,
                     enabled -> ShieldMaceSettings.INSTANCE.flightEnabled = enabled,
@@ -191,7 +191,7 @@ public class ShieldMaceGui extends Screen {
                     "toggleFlight"
             ));
             cards.add(new FeatureCard(
-                    "Height Smash (fake fall-distance)",
+                    "Mace Kill",
                     () -> ShieldMaceMod.toggleHeightSmashKey,
                     () -> ShieldMaceSettings.INSTANCE.heightSmashEnabled,
                     enabled -> ShieldMaceSettings.INSTANCE.heightSmashEnabled = enabled,
@@ -207,7 +207,7 @@ public class ShieldMaceGui extends Screen {
                     "toggleHeightSmash"
             ));
             cards.add(new FeatureCard(
-                    "Pearl Wind-Charge Intercept",
+                    "Pearl Catch",
                     () -> ShieldMaceMod.togglePearlInterceptKey,
                     () -> ShieldMaceSettings.INSTANCE.pearlInterceptEnabled,
                     enabled -> ShieldMaceSettings.INSTANCE.pearlInterceptEnabled = enabled,
