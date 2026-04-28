@@ -16,6 +16,8 @@ public class ShieldMaceMod implements ClientModInitializer {
     public static KeyBinding toggleSilentAimKey;
     public static KeyBinding toggleHeightSmashKey;
     public static KeyBinding toggleHitboxExpandKey;
+    public static KeyBinding toggleAutoTotemKey;
+    public static KeyBinding toggleNoFallKey;
 
     public static ShieldMaceFeature feature;
     public static PearlInterceptor   pearlInterceptor;
@@ -76,6 +78,18 @@ public class ShieldMaceMod implements ClientModInitializer {
                 GLFW_KEY_UNKNOWN,
                 KeyBinding.Category.MISC));
 
+        toggleAutoTotemKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.shieldmacemod.toggleAutoTotem",
+                InputUtil.Type.KEYSYM,
+                GLFW_KEY_UNKNOWN,
+                KeyBinding.Category.MISC));
+
+        toggleNoFallKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.shieldmacemod.toggleNoFall",
+                InputUtil.Type.KEYSYM,
+                GLFW_KEY_UNKNOWN,
+                KeyBinding.Category.MISC));
+
         feature          = new ShieldMaceFeature();
         pearlInterceptor = new PearlInterceptor();
 
@@ -103,6 +117,12 @@ public class ShieldMaceMod implements ClientModInitializer {
             }
             while (toggleHitboxExpandKey.wasPressed()) {
                 feature.toggleHitboxExpand(client);
+            }
+            while (toggleAutoTotemKey.wasPressed()) {
+                feature.toggleAutoTotem(client);
+            }
+            while (toggleNoFallKey.wasPressed()) {
+                feature.toggleNoFall(client);
             }
             feature.tick(client);
             pearlInterceptor.tick(client);

@@ -9,8 +9,10 @@ import net.minecraft.entity.LivingEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.item.MaceItem;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.Text;
@@ -48,6 +50,9 @@ public class ShieldMaceFeature {
     // Edge-detection for attack click (avoids consuming the key event)
     private boolean wasAttackPressed = false;
 
+    // Auto-totem rate-limiter (ticks remaining until next swap attempt)
+    private int autoTotemCooldown = 0;
+
     public void toggleCombo(MinecraftClient client) {
         s.comboEnabled = !s.comboEnabled;
         resetRuntimeState();
@@ -81,6 +86,17 @@ public class ShieldMaceFeature {
         announce(client, s.hitboxExpandEnabled ? "Hitbox Expander: ON" : "Hitbox Expander: OFF");
     }
 
+    public void toggleAutoTotem(MinecraftClient client) {
+        s.autoTotemEnabled = !s.autoTotemEnabled;
+        autoTotemCooldown = 0;
+        announce(client, s.autoTotemEnabled ? "Auto Totem: ON" : "Auto Totem: OFF");
+    }
+
+    public void toggleNoFall(MinecraftClient client) {
+        s.noFallEnabled = !s.noFallEnabled;
+        announce(client, s.noFallEnabled ? "No Fall: ON" : "No Fall: OFF");
+    }
+
     public void resetRuntimeState() {
         state                    = State.IDLE;
         delayTimer               = 0;
@@ -97,6 +113,11 @@ public class ShieldMaceFeature {
 
     public void tick(MinecraftClient client) {
         if (client.player == null || client.world == null || client.interactionManager == null) return;
+
+        // ── Auto Totem runs independently of the other features ─────────────
+        if (s.autoTotemEnabled) {
+            tickAutoTotem(client);
+        }
 
         // ── Silent Aim runs independently of the other features ──────────────
         if (s.silentAimEnabled) {
@@ -307,6 +328,47 @@ public class ShieldMaceFeature {
             client.player.swingHand(Hand.MAIN_HAND);
             smartFallTicksSinceClick = 0;
         }
+    }
+
+    // ── Feature 8: auto totem ────────────────────────────────────────────────
+    // Every `autoTotemDelayTicks` ticks, if the offhand isn't already a Totem
+    // of Undying, scan the hotbar + main inventory for one and send a slot
+    // swap (button 40 = offhand swap key) so it ends up in the offhand. Any
+    // item previously in the offhand goes back to the totem's old slot.
+    private void tickAutoTotem(MinecraftClient client) {
+        if (autoTotemCooldown > 0) {
+            autoTotemCooldown--;
+            return;
+        }
+        if (client.player == null || client.interactionManager == null) return;
+
+        ItemStack offhand = client.player.getOffHandStack();
+        if (offhand.isOf(Items.TOTEM_OF_UNDYING)) return;
+
+        var inv = client.player.getInventory();
+        int totemInvIndex = -1;
+        // PlayerInventory: 0..8 hotbar, 9..35 main. Skip armor (36..39) and offhand (40).
+        for (int i = 0; i < 36; i++) {
+            if (inv.getStack(i).isOf(Items.TOTEM_OF_UNDYING)) {
+                totemInvIndex = i;
+                break;
+            }
+        }
+        if (totemInvIndex < 0) return;
+
+        // Map PlayerInventory index → PlayerScreenHandler slot id.
+        // Hotbar (0..8) lives at screen slots 36..44; main inventory (9..35)
+        // maps 1:1 (slot ids 9..35).
+        int screenSlot = (totemInvIndex < 9) ? totemInvIndex + 36 : totemInvIndex;
+
+        client.interactionManager.clickSlot(
+                client.player.playerScreenHandler.syncId,
+                screenSlot,
+                40,                       // 40 = offhand swap key (matches F key default)
+                SlotActionType.SWAP,
+                client.player);
+
+        autoTotemCooldown = Math.max(1, s.autoTotemDelayTicks);
     }
 
     // ── Feature 6: height smash ──────────────────────────────────────────────

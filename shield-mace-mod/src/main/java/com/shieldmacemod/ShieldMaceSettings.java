@@ -48,6 +48,23 @@ public final class ShieldMaceSettings {
     /** 1..50 — expansion in tenths of a block. Displayed as 0.1 .. 5.0 blocks. */
     public int hitboxExpandTenths = 10;
 
+    // Feature 8 — Auto Totem (keep a totem in the offhand whenever one is in the inventory)
+    /** When ON, every `autoTotemDelayTicks` ticks the offhand is checked. If
+     *  it doesn't already hold a Totem of Undying and one exists anywhere in
+     *  the main inventory or hotbar, the client sends a swap click that puts
+     *  the totem into the offhand (replacing whatever was there). */
+    public boolean autoTotemEnabled = false;
+    /** 1..40 — minimum ticks between swap attempts. Keeps us from hammering
+     *  the server with click-slot packets if a totem swap fails for any reason. */
+    public int autoTotemDelayTicks = 5;
+
+    // Feature 9 — No Fall (spoof onGround=true on outgoing position packets while falling)
+    /** When ON, the client lies to the server about being on the ground for
+     *  every position packet sent while the local player's tracked fall
+     *  distance is at least 2 blocks, preventing the server from ever
+     *  accumulating enough fall-distance to deal damage on landing. */
+    public boolean noFallEnabled = false;
+
     // Feature 6 — Height Smash (fake fall-distance for max mace smash damage)
     /** When ON, every left-click attack on a living entity while holding a mace
      *  is preceded by a burst of PlayerMoveC2SPacket packets that fake a

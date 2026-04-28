@@ -130,6 +130,28 @@ public class ShieldMaceGui extends Screen {
                     "toggleHitboxExpand"
             ));
             cards.add(new FeatureCard(
+                    "Auto Totem (offhand)",
+                    () -> ShieldMaceMod.toggleAutoTotemKey,
+                    () -> ShieldMaceSettings.INSTANCE.autoTotemEnabled,
+                    enabled -> ShieldMaceSettings.INSTANCE.autoTotemEnabled = enabled,
+                    new SettingSpec[]{
+                        new SettingSpec("Re-check delay (ticks)", 1, 40,
+                                () -> ShieldMaceSettings.INSTANCE.autoTotemDelayTicks,
+                                v -> ShieldMaceSettings.INSTANCE.autoTotemDelayTicks = v)
+                    },
+                    new BoolToggleSpec[0],
+                    "toggleAutoTotem"
+            ));
+            cards.add(new FeatureCard(
+                    "No Fall Damage",
+                    () -> ShieldMaceMod.toggleNoFallKey,
+                    () -> ShieldMaceSettings.INSTANCE.noFallEnabled,
+                    enabled -> ShieldMaceSettings.INSTANCE.noFallEnabled = enabled,
+                    new SettingSpec[0],
+                    new BoolToggleSpec[0],
+                    "toggleNoFall"
+            ));
+            cards.add(new FeatureCard(
                     "Height Smash (fake fall-distance)",
                     () -> ShieldMaceMod.toggleHeightSmashKey,
                     () -> ShieldMaceSettings.INSTANCE.heightSmashEnabled,
