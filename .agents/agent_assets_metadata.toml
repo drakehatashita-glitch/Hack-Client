@@ -12,3 +12,9 @@ id = "WON3PrSO8_RulzG7cii2_"
 uri = "file://shield-mace-mod-1.2.0-release.zip"
 type = "unspecified"
 title = "Shield Mace Mod 1.2.0 — JAR for Minecraft 1.21.11 (Fabric, Java 21)"
+
+[[outputs]]
+id = "VF4sAGsGqpc16dm1eTKSU"
+uri = "file://shield-mace-mod-1.3.0-release.zip"
+type = "unspecified"
+title = "Shield Mace Mod 1.3.0 — JAR for Minecraft 1.21.11 (Fabric, Java 21)"

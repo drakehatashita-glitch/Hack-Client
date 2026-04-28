@@ -23,9 +23,12 @@ public class ShieldMaceFeature {
     private static final int SWAP_DELAY_TICKS = 3;
     // Ticks between full combo cycles to avoid server-side spam kick
     private static final int COMBO_COOLDOWN_TICKS = 10;
+    // Feature 4: clicks fired per tick while mace-spam is active
+    private static final int MACE_SPAM_CLICKS_PER_TICK = 25;
 
     private boolean enabled = false;            // Feature 1+2: axe/mace auto-combo & shield break
     private boolean breachSwapEnabled = false;  // Feature 3: attack-triggered breach mace swap
+    private boolean maceSpamEnabled = false;    // Feature 4: 25 clicks/tick while holding a mace + looking at player
 
     private enum State {
         IDLE,
@@ -60,6 +63,12 @@ public class ShieldMaceFeature {
         announce(client, breachSwapEnabled ? "Breach Mace Swap: ON" : "Breach Mace Swap: OFF");
     }
 
+    public void toggleMaceSpam(MinecraftClient client) {
+        maceSpamEnabled = !maceSpamEnabled;
+        resetRuntimeState();
+        announce(client, maceSpamEnabled ? "Mace Spam: ON" : "Mace Spam: OFF");
+    }
+
     private void resetRuntimeState() {
         state            = State.IDLE;
         delayTimer       = 0;
@@ -74,13 +83,18 @@ public class ShieldMaceFeature {
     }
 
     public void tick(MinecraftClient client) {
-        if (!enabled && !breachSwapEnabled) return;
+        if (!enabled && !breachSwapEnabled && !maceSpamEnabled) return;
         if (client.player == null || client.world == null || client.interactionManager == null) return;
 
         // ── Click edge-detection (observe only — does NOT consume the key event) ──
         boolean isAttackPressed = client.options.attackKey.isPressed();
         boolean clickedThisTick = isAttackPressed && !wasAttackPressed;
         wasAttackPressed = isAttackPressed;
+
+        // ── Feature 4: mace-spam runs every tick, independent of state machine ──
+        if (maceSpamEnabled) {
+            tickMaceSpam(client);
+        }
 
         if (cooldownTimer > 0) {
             cooldownTimer--;
@@ -193,6 +207,25 @@ public class ShieldMaceFeature {
 
         state         = State.IDLE;
         cooldownTimer = COMBO_COOLDOWN_TICKS;
+    }
+
+    // ── Feature 4: mace spam (25 clicks per tick on a player target) ──────────
+
+    private void tickMaceSpam(MinecraftClient client) {
+        // Must be holding a mace in the main hand
+        ItemStack mainHand = client.player.getInventory().getStack(
+                client.player.getInventory().getSelectedSlot());
+        if (!(mainHand.getItem() instanceof MaceItem)) return;
+
+        // Must be looking at another player
+        PlayerEntity target = getLookedAtPlayer(client);
+        if (target == null) return;
+
+        for (int i = 0; i < MACE_SPAM_CLICKS_PER_TICK; i++) {
+            client.interactionManager.attackEntity(client.player, target);
+        }
+        // Single swing animation for the burst, regardless of click count
+        client.player.swingHand(Hand.MAIN_HAND);
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

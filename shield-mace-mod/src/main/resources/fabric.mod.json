@@ -3,7 +3,7 @@
   "id": "shieldmacemod",
   "version": "${version}",
   "name": "Shield Mace Mod",
-  "description": "Auto shield-break with axe then combo with mace (density preferred over breach), plus a click-triggered breach-mace swap on any mob or player.",
+  "description": "Auto shield-break with axe then combo with mace (density preferred over breach), a click-triggered breach-mace swap on any mob or player, and a mace-spam mode that fires 25 attacks per tick at a player while holding a mace.",
   "authors": [],
   "contact": {},
   "license": "MIT",
