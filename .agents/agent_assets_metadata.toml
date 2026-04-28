@@ -24,3 +24,9 @@ id = "J3vDEAeE4Q3imdAR3Rvwc"
 uri = "file://shield-mace-mod-1.4.0-release.zip"
 type = "unspecified"
 title = "Shield Mace Mod 1.4.0 — In-game GUI (Right Shift) for Minecraft 1.21.11"
+
+[[outputs]]
+id = "p5R9QQJ3G-vdFhdc4haCi"
+uri = "file://shield-mace-mod-1.5.0-release.zip"
+type = "unspecified"
+title = "Shield Mace Mod 1.5.0 — Pearl Wind-Charge Intercept (Minecraft 1.21.11)"

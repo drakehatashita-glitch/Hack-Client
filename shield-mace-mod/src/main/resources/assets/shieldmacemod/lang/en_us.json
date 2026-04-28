@@ -3,10 +3,13 @@
   "key.shieldmacemod.toggleCombo": "Toggle Shield Mace Combo",
   "key.shieldmacemod.toggleBreachSwap": "Toggle Breach Mace Swap",
   "key.shieldmacemod.toggleMaceSpam": "Toggle Mace Spam (25 clicks/tick)",
+  "key.shieldmacemod.togglePearlIntercept": "Toggle Pearl Wind-Charge Intercept",
   "text.shieldmacemod.enabled": "Shield Mace Combo: ENABLED",
   "text.shieldmacemod.disabled": "Shield Mace Combo: DISABLED",
   "text.shieldmacemod.breachSwap.enabled": "Breach Mace Swap: ENABLED",
   "text.shieldmacemod.breachSwap.disabled": "Breach Mace Swap: DISABLED",
   "text.shieldmacemod.maceSpam.enabled": "Mace Spam: ENABLED",
-  "text.shieldmacemod.maceSpam.disabled": "Mace Spam: DISABLED"
+  "text.shieldmacemod.maceSpam.disabled": "Mace Spam: DISABLED",
+  "text.shieldmacemod.pearlIntercept.enabled": "Pearl Intercept: ENABLED",
+  "text.shieldmacemod.pearlIntercept.disabled": "Pearl Intercept: DISABLED"
 }

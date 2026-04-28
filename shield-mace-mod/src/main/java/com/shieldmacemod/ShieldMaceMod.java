@@ -12,8 +12,10 @@ public class ShieldMaceMod implements ClientModInitializer {
     public static KeyBinding toggleComboKey;
     public static KeyBinding toggleBreachSwapKey;
     public static KeyBinding toggleMaceSpamKey;
+    public static KeyBinding togglePearlInterceptKey;
 
     public static ShieldMaceFeature feature;
+    public static PearlInterceptor   pearlInterceptor;
 
     // GLFW key codes (inlined to avoid LWJGL compile-time dependency)
     private static final int GLFW_KEY_UNKNOWN       = -1;
@@ -23,37 +25,38 @@ public class ShieldMaceMod implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
-        // Right Shift now opens the in-game configuration GUI
         openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.shieldmacemod.openGui",
                 InputUtil.Type.KEYSYM,
                 GLFW_KEY_RIGHT_SHIFT,
-                KeyBinding.Category.MISC
-        ));
+                KeyBinding.Category.MISC));
 
-        // Per-feature shortcut toggles (rebindable in vanilla controls AND in the GUI)
         toggleComboKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.shieldmacemod.toggleCombo",
                 InputUtil.Type.KEYSYM,
                 GLFW_KEY_UNKNOWN,
-                KeyBinding.Category.MISC
-        ));
+                KeyBinding.Category.MISC));
 
         toggleBreachSwapKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.shieldmacemod.toggleBreachSwap",
                 InputUtil.Type.KEYSYM,
                 GLFW_KEY_RIGHT_CONTROL,
-                KeyBinding.Category.MISC
-        ));
+                KeyBinding.Category.MISC));
 
         toggleMaceSpamKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.shieldmacemod.toggleMaceSpam",
                 InputUtil.Type.KEYSYM,
                 GLFW_KEY_RIGHT_ALT,
-                KeyBinding.Category.MISC
-        ));
+                KeyBinding.Category.MISC));
 
-        feature = new ShieldMaceFeature();
+        togglePearlInterceptKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.shieldmacemod.togglePearlIntercept",
+                InputUtil.Type.KEYSYM,
+                GLFW_KEY_UNKNOWN,
+                KeyBinding.Category.MISC));
+
+        feature          = new ShieldMaceFeature();
+        pearlInterceptor = new PearlInterceptor();
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (openGuiKey.wasPressed()) {
@@ -68,7 +71,11 @@ public class ShieldMaceMod implements ClientModInitializer {
             while (toggleMaceSpamKey.wasPressed()) {
                 feature.toggleMaceSpam(client);
             }
+            while (togglePearlInterceptKey.wasPressed()) {
+                pearlInterceptor.toggle(client);
+            }
             feature.tick(client);
+            pearlInterceptor.tick(client);
         });
     }
 }

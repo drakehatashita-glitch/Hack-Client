@@ -90,6 +90,21 @@ public class ShieldMaceGui extends Screen {
                     },
                     "toggleMaceSpam"
             ));
+            cards.add(new FeatureCard(
+                    "Pearl Wind-Charge Intercept",
+                    () -> ShieldMaceMod.togglePearlInterceptKey,
+                    () -> ShieldMaceSettings.INSTANCE.pearlInterceptEnabled,
+                    enabled -> ShieldMaceSettings.INSTANCE.pearlInterceptEnabled = enabled,
+                    new SettingSpec[]{
+                        new SettingSpec("Tolerance x0.1 blocks", 1, 30,
+                                () -> ShieldMaceSettings.INSTANCE.pearlInterceptToleranceTenths,
+                                v -> ShieldMaceSettings.INSTANCE.pearlInterceptToleranceTenths = v),
+                        new SettingSpec("Lookahead (ticks)", 10, 80,
+                                () -> ShieldMaceSettings.INSTANCE.pearlInterceptLookahead,
+                                v -> ShieldMaceSettings.INSTANCE.pearlInterceptLookahead = v)
+                    },
+                    "togglePearlIntercept"
+            ));
         }
 
         layoutAndAddWidgets();
@@ -113,9 +128,12 @@ public class ShieldMaceGui extends Screen {
                     b -> {
                         boolean newVal = !card.isEnabled();
                         card.setEnabled(newVal);
-                        // Reset state machine so toggling mid-combo can't glitch
+                        // Reset internal state so toggling mid-action can't glitch
                         if (ShieldMaceMod.feature != null) {
                             ShieldMaceMod.feature.resetRuntimeState();
+                        }
+                        if (ShieldMaceMod.pearlInterceptor != null) {
+                            ShieldMaceMod.pearlInterceptor.resetRuntimeState();
                         }
                         layoutAndAddWidgets();
                     })

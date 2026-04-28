@@ -17,5 +17,12 @@ public final class ShieldMaceSettings {
     public boolean maceSpamEnabled = false;
     public int maceSpamClicksPerTick = 25;   // 1..100
 
+    // Feature 4 — Pearl Wind-Charge Intercept
+    public boolean pearlInterceptEnabled = false;
+    /** 1..30, displayed as "0.1 .. 3.0 blocks" — how close WC trajectory must come to the pearl. */
+    public int pearlInterceptToleranceTenths = 15;
+    /** 10..80 ticks — how far ahead to predict the pearl when searching for an intercept point. */
+    public int pearlInterceptLookahead = 40;
+
     private ShieldMaceSettings() {}
 }
