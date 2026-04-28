@@ -22,6 +22,15 @@ public final class ShieldMaceSettings {
      *  while falling. */
     public boolean maceSpamSmartFallClick = false;
 
+    // Feature 5 — Silent Aim (soft aim assist; only activates when crosshair is already close)
+    public boolean silentAimEnabled = false;
+    /** Max angle in degrees between crosshair and target before assist kicks in. 1..30 */
+    public int silentAimMaxAngleDegrees = 8;
+    /** % of the angular distance to close per tick. 1..100 */
+    public int silentAimStrengthPct = 25;
+    /** Max range in blocks to consider a target. 1..30 */
+    public int silentAimRangeBlocks = 6;
+
     // Feature 4 — Pearl Wind-Charge Intercept
     public boolean pearlInterceptEnabled = false;
     /** 1..30, displayed as "0.1 .. 3.0 blocks" — how close WC trajectory must come to the pearl. */

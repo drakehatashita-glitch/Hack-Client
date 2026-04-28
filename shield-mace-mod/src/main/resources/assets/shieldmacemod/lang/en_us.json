@@ -4,6 +4,7 @@
   "key.shieldmacemod.toggleBreachSwap": "Toggle Breach Mace Swap",
   "key.shieldmacemod.toggleMaceSpam": "Toggle Mace Spam (25 clicks/tick)",
   "key.shieldmacemod.togglePearlIntercept": "Toggle Pearl Wind-Charge Intercept",
+  "key.shieldmacemod.toggleSilentAim": "Toggle Silent Aim",
   "text.shieldmacemod.enabled": "Shield Mace Combo: ENABLED",
   "text.shieldmacemod.disabled": "Shield Mace Combo: DISABLED",
   "text.shieldmacemod.breachSwap.enabled": "Breach Mace Swap: ENABLED",

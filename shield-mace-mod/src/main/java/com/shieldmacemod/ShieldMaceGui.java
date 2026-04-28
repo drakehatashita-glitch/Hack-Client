@@ -98,6 +98,25 @@ public class ShieldMaceGui extends Screen {
                     "toggleMaceSpam"
             ));
             cards.add(new FeatureCard(
+                    "Silent Aim",
+                    () -> ShieldMaceMod.toggleSilentAimKey,
+                    () -> ShieldMaceSettings.INSTANCE.silentAimEnabled,
+                    enabled -> ShieldMaceSettings.INSTANCE.silentAimEnabled = enabled,
+                    new SettingSpec[]{
+                        new SettingSpec("Max angle (deg)", 1, 30,
+                                () -> ShieldMaceSettings.INSTANCE.silentAimMaxAngleDegrees,
+                                v -> ShieldMaceSettings.INSTANCE.silentAimMaxAngleDegrees = v),
+                        new SettingSpec("Strength (%)", 1, 100,
+                                () -> ShieldMaceSettings.INSTANCE.silentAimStrengthPct,
+                                v -> ShieldMaceSettings.INSTANCE.silentAimStrengthPct = v),
+                        new SettingSpec("Range (blocks)", 1, 30,
+                                () -> ShieldMaceSettings.INSTANCE.silentAimRangeBlocks,
+                                v -> ShieldMaceSettings.INSTANCE.silentAimRangeBlocks = v)
+                    },
+                    new BoolToggleSpec[0],
+                    "toggleSilentAim"
+            ));
+            cards.add(new FeatureCard(
                     "Pearl Wind-Charge Intercept",
                     () -> ShieldMaceMod.togglePearlInterceptKey,
                     () -> ShieldMaceSettings.INSTANCE.pearlInterceptEnabled,

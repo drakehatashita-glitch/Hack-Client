@@ -16,6 +16,11 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.Box;
+import net.minecraft.util.math.MathHelper;
+import net.minecraft.util.math.Vec3d;
+
+import java.util.List;
 
 public class ShieldMaceFeature {
 
@@ -60,6 +65,11 @@ public class ShieldMaceFeature {
         announce(client, s.maceSpamEnabled ? "Mace Spam: ON" : "Mace Spam: OFF");
     }
 
+    public void toggleSilentAim(MinecraftClient client) {
+        s.silentAimEnabled = !s.silentAimEnabled;
+        announce(client, s.silentAimEnabled ? "Silent Aim: ON" : "Silent Aim: OFF");
+    }
+
     public void resetRuntimeState() {
         state                    = State.IDLE;
         delayTimer               = 0;
@@ -75,8 +85,14 @@ public class ShieldMaceFeature {
     }
 
     public void tick(MinecraftClient client) {
-        if (!s.comboEnabled && !s.breachSwapEnabled && !s.maceSpamEnabled) return;
         if (client.player == null || client.world == null || client.interactionManager == null) return;
+
+        // ── Silent Aim runs independently of the other features ──────────────
+        if (s.silentAimEnabled) {
+            tickSilentAim(client);
+        }
+
+        if (!s.comboEnabled && !s.breachSwapEnabled && !s.maceSpamEnabled) return;
 
         // ── Click edge-detection (observe only — does NOT consume the key event) ──
         boolean isAttackPressed = client.options.attackKey.isPressed();
@@ -273,6 +289,67 @@ public class ShieldMaceFeature {
             client.player.swingHand(Hand.MAIN_HAND);
             smartFallTicksSinceClick = 0;
         }
+    }
+
+    // ── Feature 5: silent aim (soft camera assist when crosshair is close) ───
+
+    private void tickSilentAim(MinecraftClient client) {
+        Vec3d eye = client.player.getEyePos();
+
+        double maxRange    = Math.max(1, s.silentAimRangeBlocks);
+        double maxAngleDeg = Math.max(1, s.silentAimMaxAngleDegrees);
+        double strength    = Math.max(0.01, s.silentAimStrengthPct / 100.0);
+
+        // Reject any target whose direction makes a wider cone with the
+        // current look vector than the configured max angle. Cosine
+        // comparison avoids per-target acos() calls.
+        double minCos = Math.cos(Math.toRadians(maxAngleDeg));
+
+        Vec3d look = client.player.getRotationVector();
+
+        Box searchBox = Box.of(eye, maxRange * 2, maxRange * 2, maxRange * 2);
+        List<PlayerEntity> nearby = client.world.getEntitiesByClass(
+                PlayerEntity.class, searchBox,
+                p -> p != client.player && p.isAlive() && !p.isSpectator());
+
+        PlayerEntity bestTarget = null;
+        Vec3d        bestAimPoint = null;
+        double       bestScore = -1.0;   // higher cos = closer to crosshair
+
+        for (PlayerEntity p : nearby) {
+            Vec3d aimPoint = p.getEyePos();             // aim at the head
+            Vec3d toTarget = aimPoint.subtract(eye);
+            double dist = toTarget.length();
+            if (dist < 0.01 || dist > maxRange) continue;
+
+            double cos = look.dotProduct(toTarget.multiply(1.0 / dist));
+            if (cos < minCos) continue;                 // outside the cone
+
+            // Pick the target most aligned with the crosshair (tie-break by
+            // proximity by adding a small distance penalty).
+            double score = cos - dist * 0.001;
+            if (score > bestScore) {
+                bestScore    = score;
+                bestTarget   = p;
+                bestAimPoint = aimPoint;
+            }
+        }
+
+        if (bestTarget == null) return;
+
+        Vec3d delta = bestAimPoint.subtract(eye);
+        double targetYaw   = Math.toDegrees(Math.atan2(-delta.x, delta.z));
+        double horiz       = Math.sqrt(delta.x * delta.x + delta.z * delta.z);
+        double targetPitch = -Math.toDegrees(Math.atan2(delta.y, horiz));
+
+        float curYaw   = client.player.getYaw();
+        float curPitch = client.player.getPitch();
+
+        double yawDelta   = MathHelper.wrapDegrees(targetYaw - curYaw);
+        double pitchDelta = targetPitch - curPitch;
+
+        client.player.setYaw  ((float) (curYaw   + yawDelta   * strength));
+        client.player.setPitch((float) (curPitch + pitchDelta * strength));
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

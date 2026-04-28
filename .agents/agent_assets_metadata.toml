@@ -36,3 +36,9 @@ id = "tPIDBkJc__s8GOr5fdDGJ"
 uri = "file://shield-mace-mod-1.6.0-release.zip"
 type = "unspecified"
 title = "Shield Mace Mod 1.6.0 — Smart Fall Click for U3 shield breaking (Minecraft 1.21.11)"
+
+[[outputs]]
+id = "m8xvZCqkU5JD8sEJrBUT4"
+uri = "file://shield-mace-mod-1.7.0-release.zip"
+type = "unspecified"
+title = "Shield Mace Mod 1.7.0 — Silent Aim soft-assist (Minecraft 1.21.11)"
