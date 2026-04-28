@@ -9,6 +9,8 @@
   "key.shieldmacemod.toggleHitboxExpand": "Toggle Hitbox Expander (enlarge other players' hit-area)",
   "key.shieldmacemod.toggleAutoTotem": "Toggle Auto Totem (auto-equip totem to offhand)",
   "key.shieldmacemod.toggleNoFall": "Toggle No Fall Damage",
+  "key.shieldmacemod.toggleKillAura": "Toggle Kill Aura",
+  "key.shieldmacemod.toggleFlight": "Toggle Flight (creative-style)",
   "text.shieldmacemod.enabled": "Shield Mace Combo: ENABLED",
   "text.shieldmacemod.disabled": "Shield Mace Combo: DISABLED",
   "text.shieldmacemod.breachSwap.enabled": "Breach Mace Swap: ENABLED",

@@ -6,6 +6,8 @@ import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.mob.HostileEntity;
+import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.ItemStack;
@@ -53,6 +55,9 @@ public class ShieldMaceFeature {
     // Auto-totem rate-limiter (ticks remaining until next swap attempt)
     private int autoTotemCooldown = 0;
 
+    // Kill-aura rate-limiter (ticks remaining until next attack)
+    private int killAuraCooldown = 0;
+
     public void toggleCombo(MinecraftClient client) {
         s.comboEnabled = !s.comboEnabled;
         resetRuntimeState();
@@ -97,6 +102,29 @@ public class ShieldMaceFeature {
         announce(client, s.noFallEnabled ? "No Fall: ON" : "No Fall: OFF");
     }
 
+    public void toggleKillAura(MinecraftClient client) {
+        s.killAuraEnabled = !s.killAuraEnabled;
+        killAuraCooldown = 0;
+        announce(client, s.killAuraEnabled ? "Kill Aura: ON" : "Kill Aura: OFF");
+    }
+
+    public void toggleFlight(MinecraftClient client) {
+        s.flightEnabled = !s.flightEnabled;
+        if (client.player != null) {
+            var abilities = client.player.getAbilities();
+            if (s.flightEnabled) {
+                abilities.allowFlying = true;
+                abilities.setFlySpeed(Math.max(1, Math.min(50, s.flightSpeedTenths)) * 0.01f);
+            } else {
+                // Restore vanilla state — only creative players keep flight.
+                abilities.allowFlying = client.player.isCreative();
+                abilities.flying = abilities.allowFlying && abilities.flying;
+                abilities.setFlySpeed(0.05f);
+            }
+        }
+        announce(client, s.flightEnabled ? "Flight: ON (double-tap space)" : "Flight: OFF");
+    }
+
     public void resetRuntimeState() {
         state                    = State.IDLE;
         delayTimer               = 0;
@@ -117,6 +145,17 @@ public class ShieldMaceFeature {
         // ── Auto Totem runs independently of the other features ─────────────
         if (s.autoTotemEnabled) {
             tickAutoTotem(client);
+        }
+
+        // ── Flight is a continuous "force" — re-applied every tick so the
+        //     server's ability sync packets can't take it away mid-flight ──
+        if (s.flightEnabled) {
+            tickFlight(client);
+        }
+
+        // ── Kill Aura runs independently of the combo / spam state machine ─
+        if (s.killAuraEnabled) {
+            tickKillAura(client);
         }
 
         // ── Silent Aim runs independently of the other features ──────────────
@@ -328,6 +367,67 @@ public class ShieldMaceFeature {
             client.player.swingHand(Hand.MAIN_HAND);
             smartFallTicksSinceClick = 0;
         }
+    }
+
+    // ── Feature 10: kill aura ────────────────────────────────────────────────
+    // Every `killAuraDelayTicks` ticks, find the closest entity inside
+    // `killAuraRangeBlocks` that matches the configured target classes
+    // (players / hostile mobs / passive mobs) and attack it. Distance is
+    // measured to the entity's bounding-box edge so the range matches the
+    // server's own reach check.
+    private void tickKillAura(MinecraftClient client) {
+        if (killAuraCooldown > 0) {
+            killAuraCooldown--;
+            return;
+        }
+        if (client.player == null || client.world == null || client.interactionManager == null) return;
+
+        double range = Math.max(1, Math.min(8, s.killAuraRangeBlocks));
+        Vec3d eye = client.player.getEyePos();
+        Box searchBox = Box.of(eye, range * 2, range * 2, range * 2);
+
+        List<LivingEntity> candidates = client.world.getEntitiesByClass(
+                LivingEntity.class, searchBox, e -> {
+                    if (e == client.player || !e.isAlive()) return false;
+                    if (e instanceof PlayerEntity p) {
+                        if (p.isSpectator()) return false;
+                        if (p.isCreative()) return false;
+                        return s.killAuraTargetPlayers;
+                    }
+                    if (e instanceof HostileEntity) return s.killAuraTargetHostile;
+                    if (e instanceof PassiveEntity) return s.killAuraTargetPassive;
+                    return false;
+                });
+
+        LivingEntity best = null;
+        double bestDistSq = range * range;
+        for (LivingEntity e : candidates) {
+            // Use bounding-box distance from the eye so the range check
+            // mirrors what the server does on attack.
+            double distSq = e.getBoundingBox().squaredMagnitude(eye);
+            if (distSq < bestDistSq) {
+                bestDistSq = distSq;
+                best = e;
+            }
+        }
+        if (best == null) return;
+
+        client.interactionManager.attackEntity(client.player, best);
+        client.player.swingHand(Hand.MAIN_HAND);
+        killAuraCooldown = Math.max(1, s.killAuraDelayTicks);
+    }
+
+    // ── Feature 11: flight ────────────────────────────────────────────────────
+    // Each tick, force the local player's allowFlying ability on and re-apply
+    // the configured fly-speed. The server may overwrite these via its own
+    // PlayerAbilitiesS2CPacket, so re-applying every tick keeps flight active
+    // until the user disables the toggle. The user takes off / lands by
+    // double-tapping space, exactly like vanilla creative mode.
+    private void tickFlight(MinecraftClient client) {
+        if (client.player == null) return;
+        var abilities = client.player.getAbilities();
+        abilities.allowFlying = true;
+        abilities.setFlySpeed(Math.max(1, Math.min(50, s.flightSpeedTenths)) * 0.01f);
     }
 
     // ── Feature 8: auto totem ────────────────────────────────────────────────

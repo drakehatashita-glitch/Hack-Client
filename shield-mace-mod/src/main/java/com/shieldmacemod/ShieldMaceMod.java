@@ -18,6 +18,8 @@ public class ShieldMaceMod implements ClientModInitializer {
     public static KeyBinding toggleHitboxExpandKey;
     public static KeyBinding toggleAutoTotemKey;
     public static KeyBinding toggleNoFallKey;
+    public static KeyBinding toggleKillAuraKey;
+    public static KeyBinding toggleFlightKey;
 
     public static ShieldMaceFeature feature;
     public static PearlInterceptor   pearlInterceptor;
@@ -90,6 +92,18 @@ public class ShieldMaceMod implements ClientModInitializer {
                 GLFW_KEY_UNKNOWN,
                 KeyBinding.Category.MISC));
 
+        toggleKillAuraKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.shieldmacemod.toggleKillAura",
+                InputUtil.Type.KEYSYM,
+                GLFW_KEY_UNKNOWN,
+                KeyBinding.Category.MISC));
+
+        toggleFlightKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.shieldmacemod.toggleFlight",
+                InputUtil.Type.KEYSYM,
+                GLFW_KEY_UNKNOWN,
+                KeyBinding.Category.MISC));
+
         feature          = new ShieldMaceFeature();
         pearlInterceptor = new PearlInterceptor();
 
@@ -123,6 +137,12 @@ public class ShieldMaceMod implements ClientModInitializer {
             }
             while (toggleNoFallKey.wasPressed()) {
                 feature.toggleNoFall(client);
+            }
+            while (toggleKillAuraKey.wasPressed()) {
+                feature.toggleKillAura(client);
+            }
+            while (toggleFlightKey.wasPressed()) {
+                feature.toggleFlight(client);
             }
             feature.tick(client);
             pearlInterceptor.tick(client);

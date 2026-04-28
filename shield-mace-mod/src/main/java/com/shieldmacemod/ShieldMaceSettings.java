@@ -65,6 +65,33 @@ public final class ShieldMaceSettings {
      *  accumulating enough fall-distance to deal damage on landing. */
     public boolean noFallEnabled = false;
 
+    // Feature 10 — Kill Aura (auto-attack the closest matching entity in range)
+    /** When ON, every `killAuraDelayTicks` ticks the closest valid target
+     *  within `killAuraRangeBlocks` is attacked. The three target-class
+     *  booleans below decide what counts as a valid target. */
+    public boolean killAuraEnabled = false;
+    /** 1..8 — attack range in blocks. Vanilla reach is ~3, so values past
+     *  4 are typically rejected by anti-cheats. */
+    public int killAuraRangeBlocks = 4;
+    /** 1..20 — minimum ticks between attacks. 10 = 2 attacks/sec. */
+    public int killAuraDelayTicks = 10;
+    /** Attack other players (excluding spectators / creative). */
+    public boolean killAuraTargetPlayers = true;
+    /** Attack hostile mobs (zombies, skeletons, creepers, etc). */
+    public boolean killAuraTargetHostile = true;
+    /** Attack passive mobs (cows, sheep, villagers, etc). */
+    public boolean killAuraTargetPassive = false;
+
+    // Feature 11 — Flight (creative-style client-side fly)
+    /** When ON, allowFlying is forced true every tick so the player can
+     *  double-tap space to take off (vanilla-creative behaviour). NOTE:
+     *  this is purely client-side abilities — survival servers with
+     *  movement anti-cheat will rubberband you back to the ground. */
+    public boolean flightEnabled = false;
+    /** 1..50 — flight speed in hundredths. 5 ≈ vanilla creative speed,
+     *  50 ≈ ~10× vanilla. */
+    public int flightSpeedTenths = 10;
+
     // Feature 6 — Height Smash (fake fall-distance for max mace smash damage)
     /** When ON, every left-click attack on a living entity while holding a mace
      *  is preceded by a burst of PlayerMoveC2SPacket packets that fake a

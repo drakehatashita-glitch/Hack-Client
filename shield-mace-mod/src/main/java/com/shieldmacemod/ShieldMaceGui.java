@@ -152,6 +152,45 @@ public class ShieldMaceGui extends Screen {
                     "toggleNoFall"
             ));
             cards.add(new FeatureCard(
+                    "Kill Aura",
+                    () -> ShieldMaceMod.toggleKillAuraKey,
+                    () -> ShieldMaceSettings.INSTANCE.killAuraEnabled,
+                    enabled -> ShieldMaceSettings.INSTANCE.killAuraEnabled = enabled,
+                    new SettingSpec[]{
+                        new SettingSpec("Range (blocks)", 1, 8,
+                                () -> ShieldMaceSettings.INSTANCE.killAuraRangeBlocks,
+                                v -> ShieldMaceSettings.INSTANCE.killAuraRangeBlocks = v),
+                        new SettingSpec("Attack delay (ticks)", 1, 20,
+                                () -> ShieldMaceSettings.INSTANCE.killAuraDelayTicks,
+                                v -> ShieldMaceSettings.INSTANCE.killAuraDelayTicks = v)
+                    },
+                    new BoolToggleSpec[]{
+                        new BoolToggleSpec("Target Players",
+                                () -> ShieldMaceSettings.INSTANCE.killAuraTargetPlayers,
+                                v -> ShieldMaceSettings.INSTANCE.killAuraTargetPlayers = v),
+                        new BoolToggleSpec("Target Hostile Mobs",
+                                () -> ShieldMaceSettings.INSTANCE.killAuraTargetHostile,
+                                v -> ShieldMaceSettings.INSTANCE.killAuraTargetHostile = v),
+                        new BoolToggleSpec("Target Passive Mobs",
+                                () -> ShieldMaceSettings.INSTANCE.killAuraTargetPassive,
+                                v -> ShieldMaceSettings.INSTANCE.killAuraTargetPassive = v)
+                    },
+                    "toggleKillAura"
+            ));
+            cards.add(new FeatureCard(
+                    "Flight (creative-style)",
+                    () -> ShieldMaceMod.toggleFlightKey,
+                    () -> ShieldMaceSettings.INSTANCE.flightEnabled,
+                    enabled -> ShieldMaceSettings.INSTANCE.flightEnabled = enabled,
+                    new SettingSpec[]{
+                        new SettingSpec("Speed x0.01", 1, 50,
+                                () -> ShieldMaceSettings.INSTANCE.flightSpeedTenths,
+                                v -> ShieldMaceSettings.INSTANCE.flightSpeedTenths = v)
+                    },
+                    new BoolToggleSpec[0],
+                    "toggleFlight"
+            ));
+            cards.add(new FeatureCard(
                     "Height Smash (fake fall-distance)",
                     () -> ShieldMaceMod.toggleHeightSmashKey,
                     () -> ShieldMaceSettings.INSTANCE.heightSmashEnabled,
