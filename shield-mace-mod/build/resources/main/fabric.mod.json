@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "shieldmacemod",
+  "version": "1.8.0",
+  "name": "Shield Mace Mod",
+  "description": "Five combat features (axe+mace combo, breach-mace swap on attack, mace spam with smart fall-click for U3 shield breaking, pearl wind-charge intercept, silent aim assist) configured through an in-game GUI opened with Right Shift. Each feature has a togglable on/off state, a rebindable shortcut key, and tunable settings.",
+  "authors": [],
+  "contact": {},
+  "license": "MIT",
+  "environment": "client",
+  "entrypoints": {
+    "client": [
+      "com.shieldmacemod.ShieldMaceMod"
+    ]
+  },
+  "mixins": [
+    "shieldmacemod.mixins.json"
+  ],
+  "depends": {
+    "fabricloader": ">=0.15.0",
+    "minecraft": "~1.21.11",
+    "java": ">=21",
+    "fabric-api": "*"
+  }
+}

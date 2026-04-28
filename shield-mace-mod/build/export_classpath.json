@@ -1,0 +1,14 @@
+{
+  "projectPath": ":",
+  "classpaths": {
+    "test": [
+      "/home/runner/workspace/shield-mace-mod/build/classes/java/test",
+      "/home/runner/workspace/shield-mace-mod/build/resources/test"
+    ],
+    "main": [
+      "/home/runner/workspace/shield-mace-mod/build/classes/java/main",
+      "/home/runner/workspace/shield-mace-mod/build/resources/main",
+      "/home/runner/workspace/shield-mace-mod/build/devlibs/shield-mace-mod-1.8.0-dev.jar"
+    ]
+  }
+}

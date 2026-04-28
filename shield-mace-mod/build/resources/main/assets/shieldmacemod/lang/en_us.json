@@ -1,0 +1,23 @@
+{
+  "key.shieldmacemod.openGui": "Open Shield Mace GUI",
+  "key.shieldmacemod.toggleCombo": "Toggle Auto Stun Slam",
+  "key.shieldmacemod.toggleBreachSwap": "Toggle Breach Swap",
+  "key.shieldmacemod.toggleMaceSpam": "Toggle Shield Breaker",
+  "key.shieldmacemod.togglePearlIntercept": "Toggle Pearl Catch",
+  "key.shieldmacemod.toggleSilentAim": "Toggle Silent Aim",
+  "key.shieldmacemod.toggleHeightSmash": "Toggle Mace Kill",
+  "key.shieldmacemod.toggleHitboxExpand": "Toggle Hitboxes",
+  "key.shieldmacemod.toggleAutoTotem": "Toggle Auto Totem",
+  "key.shieldmacemod.toggleNoFall": "Toggle No Fall",
+  "key.shieldmacemod.toggleKillAura": "Toggle Kill Aura",
+  "key.shieldmacemod.toggleFlight": "Toggle Flight",
+  "key.shieldmacemod.toggleBlink": "Toggle Blink",
+  "text.shieldmacemod.enabled": "Auto Stun Slam: ENABLED",
+  "text.shieldmacemod.disabled": "Auto Stun Slam: DISABLED",
+  "text.shieldmacemod.breachSwap.enabled": "Breach Swap: ENABLED",
+  "text.shieldmacemod.breachSwap.disabled": "Breach Swap: DISABLED",
+  "text.shieldmacemod.maceSpam.enabled": "Shield Breaker: ENABLED",
+  "text.shieldmacemod.maceSpam.disabled": "Shield Breaker: DISABLED",
+  "text.shieldmacemod.pearlIntercept.enabled": "Pearl Catch: ENABLED",
+  "text.shieldmacemod.pearlIntercept.disabled": "Pearl Catch: DISABLED"
+}
