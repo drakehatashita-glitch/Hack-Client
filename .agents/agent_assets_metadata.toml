@@ -48,3 +48,9 @@ id = "tOqxOseeZt6FcsizrzPsf"
 uri = "file://shield-mace-mod-1.9.0.jar.tar.gz"
 type = "unspecified"
 title = "Shield Mace Mod 1.9.0 (Minecraft 1.21.11) — extract to get the .jar"
+
+[[outputs]]
+id = "NvqCcQBmnS7p_bHnUDfCE"
+uri = "file://shield-mace-mod-1.10.0.tar.gz"
+type = "unspecified"
+title = "shield-mace-mod 1.10.0 (jar inside)"
