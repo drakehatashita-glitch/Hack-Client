@@ -6,6 +6,7 @@
   "key.shieldmacemod.togglePearlIntercept": "Toggle Pearl Wind-Charge Intercept",
   "key.shieldmacemod.toggleSilentAim": "Toggle Silent Aim",
   "key.shieldmacemod.toggleHeightSmash": "Toggle Height Smash (max mace fall-distance)",
+  "key.shieldmacemod.toggleHitboxExpand": "Toggle Hitbox Expander (enlarge other players' hit-area)",
   "text.shieldmacemod.enabled": "Shield Mace Combo: ENABLED",
   "text.shieldmacemod.disabled": "Shield Mace Combo: DISABLED",
   "text.shieldmacemod.breachSwap.enabled": "Breach Mace Swap: ENABLED",

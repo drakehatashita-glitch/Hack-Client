@@ -117,6 +117,19 @@ public class ShieldMaceGui extends Screen {
                     "toggleSilentAim"
             ));
             cards.add(new FeatureCard(
+                    "Hitbox Expander",
+                    () -> ShieldMaceMod.toggleHitboxExpandKey,
+                    () -> ShieldMaceSettings.INSTANCE.hitboxExpandEnabled,
+                    enabled -> ShieldMaceSettings.INSTANCE.hitboxExpandEnabled = enabled,
+                    new SettingSpec[]{
+                        new SettingSpec("Expand x0.1 blocks", 1, 50,
+                                () -> ShieldMaceSettings.INSTANCE.hitboxExpandTenths,
+                                v -> ShieldMaceSettings.INSTANCE.hitboxExpandTenths = v)
+                    },
+                    new BoolToggleSpec[0],
+                    "toggleHitboxExpand"
+            ));
+            cards.add(new FeatureCard(
                     "Height Smash (fake fall-distance)",
                     () -> ShieldMaceMod.toggleHeightSmashKey,
                     () -> ShieldMaceSettings.INSTANCE.heightSmashEnabled,

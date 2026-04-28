@@ -38,6 +38,16 @@ public final class ShieldMaceSettings {
     /** 10..80 ticks — how far ahead to predict the pearl when searching for an intercept point. */
     public int pearlInterceptLookahead = 40;
 
+    // Feature 7 — Hitbox Expander (client-side visual + targeting box expansion on other players)
+    /** When ON, every other player's targeting margin (used for client raycast
+     *  hit-tests) is enlarged by `hitboxExpandTenths / 10` blocks, so attacks
+     *  and crosshair targeting register over a wider area around them. The
+     *  local player is unaffected. Collision boxes are not changed, so this
+     *  does not push players around. */
+    public boolean hitboxExpandEnabled = false;
+    /** 1..50 — expansion in tenths of a block. Displayed as 0.1 .. 5.0 blocks. */
+    public int hitboxExpandTenths = 10;
+
     // Feature 6 — Height Smash (fake fall-distance for max mace smash damage)
     /** When ON, every left-click attack on a living entity while holding a mace
      *  is preceded by a burst of PlayerMoveC2SPacket packets that fake a

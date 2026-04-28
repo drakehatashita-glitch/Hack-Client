@@ -76,6 +76,11 @@ public class ShieldMaceFeature {
         announce(client, s.heightSmashEnabled ? "Height Smash: ON" : "Height Smash: OFF");
     }
 
+    public void toggleHitboxExpand(MinecraftClient client) {
+        s.hitboxExpandEnabled = !s.hitboxExpandEnabled;
+        announce(client, s.hitboxExpandEnabled ? "Hitbox Expander: ON" : "Hitbox Expander: OFF");
+    }
+
     public void resetRuntimeState() {
         state                    = State.IDLE;
         delayTimer               = 0;
