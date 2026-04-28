@@ -13,6 +13,7 @@ import net.minecraft.item.AxeItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.MaceItem;
+import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.registry.RegistryKeys;
@@ -25,6 +26,8 @@ import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
 
+import java.util.ArrayDeque;
+import java.util.Deque;
 import java.util.List;
 
 public class ShieldMaceFeature {
@@ -57,6 +60,17 @@ public class ShieldMaceFeature {
 
     // Kill-aura rate-limiter (ticks remaining until next attack)
     private int killAuraCooldown = 0;
+
+    // ── Blink state ──────────────────────────────────────────────────────
+    // While blinkEnabled, every outgoing PlayerMoveC2SPacket is intercepted
+    // by ClientPlayNetworkHandlerMixin and pushed onto this queue instead
+    // of being sent to the server. When blink is turned OFF, the queue is
+    // drained in FIFO order back through the network handler so the server
+    // fast-forwards the player's tracked position to where they actually
+    // are now. `blinkBypass` is set to true while we are flushing so the
+    // mixin lets those replays through instead of re-queuing them.
+    private final Deque<Packet<?>> blinkQueue = new ArrayDeque<>();
+    private boolean blinkBypass = false;
 
     public void toggleCombo(MinecraftClient client) {
         s.comboEnabled = !s.comboEnabled;
@@ -106,6 +120,45 @@ public class ShieldMaceFeature {
         s.killAuraEnabled = !s.killAuraEnabled;
         killAuraCooldown = 0;
         announce(client, s.killAuraEnabled ? "Kill Aura: ON" : "Kill Aura: OFF");
+    }
+
+    public void toggleBlink(MinecraftClient client) {
+        s.blinkEnabled = !s.blinkEnabled;
+        if (!s.blinkEnabled) {
+            // Disabling: flush every queued movement packet so the server
+            // fast-forwards the player's tracked position to where they
+            // actually are now. The bypass flag prevents the outgoing
+            // mixin from re-queuing the packets we are replaying here.
+            int flushed = blinkQueue.size();
+            if (client.player != null && client.player.networkHandler != null) {
+                blinkBypass = true;
+                try {
+                    while (!blinkQueue.isEmpty()) {
+                        client.player.networkHandler.sendPacket(blinkQueue.pollFirst());
+                    }
+                } finally {
+                    blinkBypass = false;
+                }
+            } else {
+                blinkQueue.clear();
+            }
+            announce(client, "Blink: OFF (flushed " + flushed + " packets)");
+        } else {
+            blinkQueue.clear();
+            announce(client, "Blink: ON");
+        }
+    }
+
+    /** Called from {@code ClientPlayNetworkHandlerMixin}. Returns true if
+     *  the packet was queued and the original send should be cancelled. */
+    public boolean queueBlinkPacket(Packet<?> packet) {
+        if (!s.blinkEnabled || blinkBypass) return false;
+        if (!(packet instanceof PlayerMoveC2SPacket)) return false;
+        // Cap the queue so a player who leaves blink on for hours doesn't
+        // OOM the client. 24000 packets ≈ 20 minutes of movement at 20 tps.
+        if (blinkQueue.size() >= 24000) return false;
+        blinkQueue.addLast(packet);
+        return true;
     }
 
     public void toggleFlight(MinecraftClient client) {
@@ -399,8 +452,28 @@ public class ShieldMaceFeature {
                     return false;
                 });
 
+        double rangeSq = range * range;
+
+        if (s.killAuraTargetAll) {
+            // Multi-target: attack every valid entity inside the range
+            // this tick, then start the cooldown so we don't hammer the
+            // server every single tick.
+            int hits = 0;
+            for (LivingEntity e : candidates) {
+                double distSq = e.getBoundingBox().squaredMagnitude(eye);
+                if (distSq > rangeSq) continue;
+                client.interactionManager.attackEntity(client.player, e);
+                hits++;
+            }
+            if (hits > 0) {
+                client.player.swingHand(Hand.MAIN_HAND);
+                killAuraCooldown = Math.max(1, s.killAuraDelayTicks);
+            }
+            return;
+        }
+
         LivingEntity best = null;
-        double bestDistSq = range * range;
+        double bestDistSq = rangeSq;
         for (LivingEntity e : candidates) {
             // Use bounding-box distance from the eye so the range check
             // mirrors what the server does on attack.

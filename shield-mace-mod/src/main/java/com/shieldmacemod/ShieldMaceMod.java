@@ -20,6 +20,7 @@ public class ShieldMaceMod implements ClientModInitializer {
     public static KeyBinding toggleNoFallKey;
     public static KeyBinding toggleKillAuraKey;
     public static KeyBinding toggleFlightKey;
+    public static KeyBinding toggleBlinkKey;
 
     public static ShieldMaceFeature feature;
     public static PearlInterceptor   pearlInterceptor;
@@ -104,6 +105,12 @@ public class ShieldMaceMod implements ClientModInitializer {
                 GLFW_KEY_UNKNOWN,
                 KeyBinding.Category.MISC));
 
+        toggleBlinkKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.shieldmacemod.toggleBlink",
+                InputUtil.Type.KEYSYM,
+                GLFW_KEY_UNKNOWN,
+                KeyBinding.Category.MISC));
+
         feature          = new ShieldMaceFeature();
         pearlInterceptor = new PearlInterceptor();
 
@@ -143,6 +150,9 @@ public class ShieldMaceMod implements ClientModInitializer {
             }
             while (toggleFlightKey.wasPressed()) {
                 feature.toggleFlight(client);
+            }
+            while (toggleBlinkKey.wasPressed()) {
+                feature.toggleBlink(client);
             }
             feature.tick(client);
             pearlInterceptor.tick(client);

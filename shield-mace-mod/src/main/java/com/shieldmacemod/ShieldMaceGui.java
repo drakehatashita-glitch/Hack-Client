@@ -173,7 +173,10 @@ public class ShieldMaceGui extends Screen {
                                 v -> ShieldMaceSettings.INSTANCE.killAuraTargetHostile = v),
                         new BoolToggleSpec("Target Passive Mobs",
                                 () -> ShieldMaceSettings.INSTANCE.killAuraTargetPassive,
-                                v -> ShieldMaceSettings.INSTANCE.killAuraTargetPassive = v)
+                                v -> ShieldMaceSettings.INSTANCE.killAuraTargetPassive = v),
+                        new BoolToggleSpec("Multi-target (hit all in range)",
+                                () -> ShieldMaceSettings.INSTANCE.killAuraTargetAll,
+                                v -> ShieldMaceSettings.INSTANCE.killAuraTargetAll = v)
                     },
                     "toggleKillAura"
             ));
@@ -205,6 +208,24 @@ public class ShieldMaceGui extends Screen {
                     },
                     new BoolToggleSpec[0],
                     "toggleHeightSmash"
+            ));
+            cards.add(new FeatureCard(
+                    "Blink",
+                    () -> ShieldMaceMod.toggleBlinkKey,
+                    () -> ShieldMaceSettings.INSTANCE.blinkEnabled,
+                    enabled -> {
+                        // Route through the feature so toggling from the GUI
+                        // also flushes / clears the queued packets correctly.
+                        if (ShieldMaceMod.feature != null
+                                && ShieldMaceSettings.INSTANCE.blinkEnabled != enabled) {
+                            ShieldMaceMod.feature.toggleBlink(MinecraftClient.getInstance());
+                        } else {
+                            ShieldMaceSettings.INSTANCE.blinkEnabled = enabled;
+                        }
+                    },
+                    new SettingSpec[0],
+                    new BoolToggleSpec[0],
+                    "toggleBlink"
             ));
             cards.add(new FeatureCard(
                     "Pearl Catch",

@@ -3,6 +3,7 @@
   "package": "com.shieldmacemod.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
+    "ClientCommonNetworkHandlerMixin",
     "EntityMixin",
     "EntityRendererMixin",
     "PlayerMoveC2SPacketMixin"

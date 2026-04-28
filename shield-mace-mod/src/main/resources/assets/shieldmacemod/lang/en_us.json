@@ -11,6 +11,7 @@
   "key.shieldmacemod.toggleNoFall": "Toggle No Fall",
   "key.shieldmacemod.toggleKillAura": "Toggle Kill Aura",
   "key.shieldmacemod.toggleFlight": "Toggle Flight",
+  "key.shieldmacemod.toggleBlink": "Toggle Blink",
   "text.shieldmacemod.enabled": "Auto Stun Slam: ENABLED",
   "text.shieldmacemod.disabled": "Auto Stun Slam: DISABLED",
   "text.shieldmacemod.breachSwap.enabled": "Breach Swap: ENABLED",

@@ -81,6 +81,19 @@ public final class ShieldMaceSettings {
     public boolean killAuraTargetHostile = true;
     /** Attack passive mobs (cows, sheep, villagers, etc). */
     public boolean killAuraTargetPassive = false;
+    /** When ON, every valid target inside the range is attacked on each
+     *  tick the cooldown allows, instead of just the single closest one. */
+    public boolean killAuraTargetAll = false;
+
+    // Feature 12 — Blink (queue outgoing position packets so the server
+    // sees the player standing still while they actually walk around).
+    /** When ON, all outgoing PlayerMoveC2SPacket packets are intercepted
+     *  and queued instead of being sent to the server, so other players
+     *  see the local player standing still at the position from when
+     *  blink was enabled. When the toggle is turned OFF, the queued
+     *  packets are flushed in order so the server fast-forwards to the
+     *  local player's true current position. */
+    public boolean blinkEnabled = false;
 
     // Feature 11 — Flight (creative-style client-side fly)
     /** When ON, allowFlying is forced true every tick so the player can
