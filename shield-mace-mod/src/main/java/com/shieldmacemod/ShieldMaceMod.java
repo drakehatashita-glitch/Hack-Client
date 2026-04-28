@@ -14,6 +14,7 @@ public class ShieldMaceMod implements ClientModInitializer {
     public static KeyBinding toggleMaceSpamKey;
     public static KeyBinding togglePearlInterceptKey;
     public static KeyBinding toggleSilentAimKey;
+    public static KeyBinding toggleHeightSmashKey;
 
     public static ShieldMaceFeature feature;
     public static PearlInterceptor   pearlInterceptor;
@@ -62,6 +63,12 @@ public class ShieldMaceMod implements ClientModInitializer {
                 GLFW_KEY_UNKNOWN,
                 KeyBinding.Category.MISC));
 
+        toggleHeightSmashKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
+                "key.shieldmacemod.toggleHeightSmash",
+                InputUtil.Type.KEYSYM,
+                GLFW_KEY_UNKNOWN,
+                KeyBinding.Category.MISC));
+
         feature          = new ShieldMaceFeature();
         pearlInterceptor = new PearlInterceptor();
 
@@ -83,6 +90,9 @@ public class ShieldMaceMod implements ClientModInitializer {
             }
             while (toggleSilentAimKey.wasPressed()) {
                 feature.toggleSilentAim(client);
+            }
+            while (toggleHeightSmashKey.wasPressed()) {
+                feature.toggleHeightSmash(client);
             }
             feature.tick(client);
             pearlInterceptor.tick(client);

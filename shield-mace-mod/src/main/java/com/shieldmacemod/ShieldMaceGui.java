@@ -117,6 +117,22 @@ public class ShieldMaceGui extends Screen {
                     "toggleSilentAim"
             ));
             cards.add(new FeatureCard(
+                    "Height Smash (fake fall-distance)",
+                    () -> ShieldMaceMod.toggleHeightSmashKey,
+                    () -> ShieldMaceSettings.INSTANCE.heightSmashEnabled,
+                    enabled -> ShieldMaceSettings.INSTANCE.heightSmashEnabled = enabled,
+                    new SettingSpec[]{
+                        new SettingSpec("Drop packets", 1, 40,
+                                () -> ShieldMaceSettings.INSTANCE.heightSmashPackets,
+                                v -> ShieldMaceSettings.INSTANCE.heightSmashPackets = v),
+                        new SettingSpec("Y per packet (blocks)", 1, 9,
+                                () -> ShieldMaceSettings.INSTANCE.heightSmashDropPerPacket,
+                                v -> ShieldMaceSettings.INSTANCE.heightSmashDropPerPacket = v)
+                    },
+                    new BoolToggleSpec[0],
+                    "toggleHeightSmash"
+            ));
+            cards.add(new FeatureCard(
                     "Pearl Wind-Charge Intercept",
                     () -> ShieldMaceMod.togglePearlInterceptKey,
                     () -> ShieldMaceSettings.INSTANCE.pearlInterceptEnabled,

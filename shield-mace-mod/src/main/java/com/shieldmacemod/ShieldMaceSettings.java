@@ -38,5 +38,20 @@ public final class ShieldMaceSettings {
     /** 10..80 ticks — how far ahead to predict the pearl when searching for an intercept point. */
     public int pearlInterceptLookahead = 40;
 
+    // Feature 6 — Height Smash (fake fall-distance for max mace smash damage)
+    /** When ON, every left-click attack on a living entity while holding a mace
+     *  is preceded by a burst of PlayerMoveC2SPacket packets that fake a
+     *  large drop in the player's Y position. This causes the server to
+     *  accumulate fall-distance up to ~world-height limit, so the mace's
+     *  smash bonus is maxed out for that hit. The player is then sent
+     *  back up so the server's reach check still passes. */
+    public boolean heightSmashEnabled = false;
+    /** 1..40 — number of fake drop packets sent. Total faked fall =
+     *  heightSmashPackets × heightSmashDropPerPacket blocks. */
+    public int heightSmashPackets = 36;
+    /** 1..9 — Y drop per fake packet. Must stay under 10 to avoid the
+     *  vanilla server's per-packet movement-too-fast check. */
+    public int heightSmashDropPerPacket = 9;
+
     private ShieldMaceSettings() {}
 }

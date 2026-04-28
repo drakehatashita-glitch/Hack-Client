@@ -10,6 +10,7 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.MaceItem;
+import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
 import net.minecraft.text.Text;
@@ -70,6 +71,11 @@ public class ShieldMaceFeature {
         announce(client, s.silentAimEnabled ? "Silent Aim: ON" : "Silent Aim: OFF");
     }
 
+    public void toggleHeightSmash(MinecraftClient client) {
+        s.heightSmashEnabled = !s.heightSmashEnabled;
+        announce(client, s.heightSmashEnabled ? "Height Smash: ON" : "Height Smash: OFF");
+    }
+
     public void resetRuntimeState() {
         state                    = State.IDLE;
         delayTimer               = 0;
@@ -92,12 +98,19 @@ public class ShieldMaceFeature {
             tickSilentAim(client);
         }
 
-        if (!s.comboEnabled && !s.breachSwapEnabled && !s.maceSpamEnabled) return;
-
-        // ── Click edge-detection (observe only — does NOT consume the key event) ──
+        // ── Click edge-detection (observe only — does NOT consume the key event)
+        //     Tracked every tick so Height Smash can fire even when no other
+        //     combo/breach/spam features are on. ──
         boolean isAttackPressed = client.options.attackKey.isPressed();
         boolean clickedThisTick = isAttackPressed && !wasAttackPressed;
         wasAttackPressed = isAttackPressed;
+
+        // ── Feature 6 (height smash): fires once per click while holding a mace ──
+        if (s.heightSmashEnabled && clickedThisTick) {
+            tryHeightSmash(client);
+        }
+
+        if (!s.comboEnabled && !s.breachSwapEnabled && !s.maceSpamEnabled) return;
 
         // ── Feature 4 (mace spam): runs every tick, independent of state machine ──
         if (s.maceSpamEnabled) {
@@ -289,6 +302,67 @@ public class ShieldMaceFeature {
             client.player.swingHand(Hand.MAIN_HAND);
             smartFallTicksSinceClick = 0;
         }
+    }
+
+    // ── Feature 6: height smash ──────────────────────────────────────────────
+    // Sends a burst of fake position packets that drop the server-tracked Y by
+    // (heightSmashPackets × heightSmashDropPerPacket) blocks with onGround=false,
+    // so the server accumulates a large fall-distance. Then sends matching
+    // upward packets to restore Y to the original (so the server's reach check
+    // on the attack still passes) and finally sends the attack — at which point
+    // the mace's smash bonus is applied at the inflated fall-distance.
+    //
+    // NOTE: the player's server-side fall-distance remains high after this
+    // burst, so when the client's normal movement packets next report
+    // onGround=true, the server applies that fall damage to the attacker.
+    // Use with high HP / Resistance / lots of armor.
+    private void tryHeightSmash(MinecraftClient client) {
+        var player = client.player;
+        if (player == null || player.networkHandler == null) return;
+
+        // Must be holding a mace
+        ItemStack mainHand = player.getInventory().getStack(
+                player.getInventory().getSelectedSlot());
+        if (!(mainHand.getItem() instanceof MaceItem)) return;
+
+        // Must be looking at a living target
+        LivingEntity target = getLookedAtLiving(client);
+        if (target == null) return;
+
+        int packets = Math.max(1, Math.min(40, s.heightSmashPackets));
+        double dropPerPacket = Math.max(1, Math.min(9, s.heightSmashDropPerPacket));
+
+        double origX = player.getX();
+        double origY = player.getY();
+        double origZ = player.getZ();
+
+        var net = player.networkHandler;
+
+        // Phase 1: drop server-tracked Y in small steps, accumulating fall-distance.
+        double fakeY = origY;
+        for (int i = 0; i < packets; i++) {
+            fakeY -= dropPerPacket;
+            net.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
+                    origX, fakeY, origZ, false, false));
+        }
+
+        // Phase 2: rise back to the original Y so the attack's reach check passes.
+        // onGround=false the whole way so the server keeps the accumulated
+        // fall-distance instead of resetting it on landing.
+        for (int i = 0; i < packets; i++) {
+            fakeY += dropPerPacket;
+            net.sendPacket(new PlayerMoveC2SPacket.PositionAndOnGround(
+                    origX, fakeY, origZ, false, false));
+        }
+
+        // Phase 3: do the actual attack with the mace.
+        client.interactionManager.attackEntity(player, target);
+        player.swingHand(Hand.MAIN_HAND);
+
+        double fakeFall = packets * dropPerPacket;
+        client.player.sendMessage(
+                Text.literal(String.format("Height Smash: faked fd ≈ %.0f blocks", fakeFall)),
+                true);
     }
 
     // ── Feature 5: silent aim (soft camera assist when crosshair is close) ───
