@@ -61,6 +61,7 @@ public class ShieldMaceGui extends Screen {
                                 () -> ShieldMaceSettings.INSTANCE.comboCooldownTicks,
                                 v -> ShieldMaceSettings.INSTANCE.comboCooldownTicks = v)
                     },
+                    new BoolToggleSpec[0],
                     "toggleCombo"
             ));
             cards.add(new FeatureCard(
@@ -76,6 +77,7 @@ public class ShieldMaceGui extends Screen {
                                 () -> ShieldMaceSettings.INSTANCE.breachSwapCooldownTicks,
                                 v -> ShieldMaceSettings.INSTANCE.breachSwapCooldownTicks = v)
                     },
+                    new BoolToggleSpec[0],
                     "toggleBreachSwap"
             ));
             cards.add(new FeatureCard(
@@ -87,6 +89,11 @@ public class ShieldMaceGui extends Screen {
                         new SettingSpec("Clicks per tick", 1, 100,
                                 () -> ShieldMaceSettings.INSTANCE.maceSpamClicksPerTick,
                                 v -> ShieldMaceSettings.INSTANCE.maceSpamClicksPerTick = v)
+                    },
+                    new BoolToggleSpec[]{
+                        new BoolToggleSpec("Smart Fall Click (U3 shield break)",
+                                () -> ShieldMaceSettings.INSTANCE.maceSpamSmartFallClick,
+                                v -> ShieldMaceSettings.INSTANCE.maceSpamSmartFallClick = v)
                     },
                     "toggleMaceSpam"
             ));
@@ -103,6 +110,7 @@ public class ShieldMaceGui extends Screen {
                                 () -> ShieldMaceSettings.INSTANCE.pearlInterceptLookahead,
                                 v -> ShieldMaceSettings.INSTANCE.pearlInterceptLookahead = v)
                     },
+                    new BoolToggleSpec[0],
                     "togglePearlIntercept"
             ));
         }
@@ -163,6 +171,23 @@ public class ShieldMaceGui extends Screen {
                     .build();
                 addDrawableChild(keybindBtn);
                 rowY += WIDGET_HEIGHT + CARD_INNER_PADDING;
+
+                // ── Bool toggle rows ──────────────────────────────────────────
+                for (BoolToggleSpec spec : card.boolToggles) {
+                    final BoolToggleSpec specRef = spec;
+                    int btnW = 60;
+                    int btnX = card.x + CARD_WIDTH - CARD_INNER_PADDING - btnW;
+                    ButtonWidget subToggleBtn = ButtonWidget.builder(
+                            Text.literal(specRef.getter.get() ? "ON" : "OFF"),
+                            b -> {
+                                specRef.setter.set(!specRef.getter.get());
+                                layoutAndAddWidgets();
+                            })
+                        .dimensions(btnX, rowY, btnW, WIDGET_HEIGHT)
+                        .build();
+                    addDrawableChild(subToggleBtn);
+                    rowY += WIDGET_HEIGHT + CARD_INNER_PADDING;
+                }
 
                 // ── Setting sliders ───────────────────────────────────────────
                 for (SettingSpec spec : card.settings) {
@@ -235,12 +260,21 @@ public class ShieldMaceGui extends Screen {
             context.drawTextWithShadow(this.textRenderer, Text.literal(hint),
                     card.x + CARD_WIDTH - CARD_INNER_PADDING - hintW, nameY, COLOR_HINT);
 
-            // "Keybind:" label inside expanded card
+            // "Keybind:" label and bool-toggle labels inside expanded card
             if (card.expanded) {
-                int labelY = card.y + CARD_HEADER_HEIGHT + CARD_INNER_PADDING
-                        + (WIDGET_HEIGHT - this.textRenderer.fontHeight) / 2;
+                int rowY = card.y + CARD_HEADER_HEIGHT + CARD_INNER_PADDING;
+                int labelY = rowY + (WIDGET_HEIGHT - this.textRenderer.fontHeight) / 2;
                 context.drawTextWithShadow(this.textRenderer, Text.literal("Keybind"),
                         card.x + CARD_INNER_PADDING, labelY, COLOR_LABEL);
+                rowY += WIDGET_HEIGHT + CARD_INNER_PADDING;
+
+                for (BoolToggleSpec spec : card.boolToggles) {
+                    int boolLabelY = rowY + (WIDGET_HEIGHT - this.textRenderer.fontHeight) / 2;
+                    context.drawTextWithShadow(this.textRenderer,
+                            Text.literal(spec.label),
+                            card.x + CARD_INNER_PADDING, boolLabelY, COLOR_LABEL);
+                    rowY += WIDGET_HEIGHT + CARD_INNER_PADDING;
+                }
 
                 if (pendingRebind == i) {
                     int promptY = card.y + card.height + 2;
@@ -343,12 +377,25 @@ public class ShieldMaceGui extends Screen {
         }
     }
 
+    private static final class BoolToggleSpec {
+        final String label;
+        final BoolGetter getter;
+        final BoolSetter setter;
+
+        BoolToggleSpec(String label, BoolGetter getter, BoolSetter setter) {
+            this.label = label;
+            this.getter = getter;
+            this.setter = setter;
+        }
+    }
+
     private static final class FeatureCard {
         final String name;
         final KeyBindingSupplier keyBindingSupplier;
         final BoolGetter enabledGetter;
         final BoolSetter enabledSetter;
         final SettingSpec[] settings;
+        final BoolToggleSpec[] boolToggles;
         @SuppressWarnings("unused") final String translationSuffix;
 
         boolean expanded = false;
@@ -359,12 +406,14 @@ public class ShieldMaceGui extends Screen {
                     BoolGetter enabledGetter,
                     BoolSetter enabledSetter,
                     SettingSpec[] settings,
+                    BoolToggleSpec[] boolToggles,
                     String translationSuffix) {
             this.name = name;
             this.keyBindingSupplier = keyBindingSupplier;
             this.enabledGetter = enabledGetter;
             this.enabledSetter = enabledSetter;
             this.settings = settings;
+            this.boolToggles = boolToggles;
             this.translationSuffix = translationSuffix;
         }
 

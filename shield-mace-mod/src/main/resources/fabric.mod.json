@@ -3,7 +3,7 @@
   "id": "shieldmacemod",
   "version": "${version}",
   "name": "Shield Mace Mod",
-  "description": "Four combat features (axe+mace combo, breach-mace swap on attack, mace spam, pearl wind-charge intercept) configured through an in-game GUI opened with Right Shift. Each feature has a togglable on/off state, a rebindable shortcut key, and tunable settings.",
+  "description": "Four combat features (axe+mace combo, breach-mace swap on attack, mace spam with smart fall-click for U3 shield breaking, pearl wind-charge intercept) configured through an in-game GUI opened with Right Shift. Each feature has a togglable on/off state, a rebindable shortcut key, and tunable settings.",
   "authors": [],
   "contact": {},
   "license": "MIT",

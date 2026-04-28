@@ -30,3 +30,9 @@ id = "p5R9QQJ3G-vdFhdc4haCi"
 uri = "file://shield-mace-mod-1.5.0-release.zip"
 type = "unspecified"
 title = "Shield Mace Mod 1.5.0 — Pearl Wind-Charge Intercept (Minecraft 1.21.11)"
+
+[[outputs]]
+id = "tPIDBkJc__s8GOr5fdDGJ"
+uri = "file://shield-mace-mod-1.6.0-release.zip"
+type = "unspecified"
+title = "Shield Mace Mod 1.6.0 — Smart Fall Click for U3 shield breaking (Minecraft 1.21.11)"

@@ -61,10 +61,11 @@ public class ShieldMaceFeature {
     }
 
     public void resetRuntimeState() {
-        state            = State.IDLE;
-        delayTimer       = 0;
-        cooldownTimer    = 0;
-        wasAttackPressed = false;
+        state                    = State.IDLE;
+        delayTimer               = 0;
+        cooldownTimer            = 0;
+        wasAttackPressed         = false;
+        smartFallTicksSinceClick = 0;
     }
 
     private void announce(MinecraftClient client, String msg) {
@@ -199,19 +200,79 @@ public class ShieldMaceFeature {
 
     // ── Feature 4: mace spam (N clicks per tick on a player target) ───────────
 
+    private static final double MACE_BASE_DAMAGE      = 5.0;   // approximate base attack damage
+    private static final double SHIELD_BASE_DURABILITY = 336.0;
+    private static final double UNBREAKING_3_FACTOR   = 4.0;   // expected dur usage divisor (lvl+1)
+    private static final double SMART_TARGET_FD       = 3.0;   // optimal fd per click (end of 4-dmg/block zone)
+    private static final double SMART_MIN_FD          = 1.5;   // minimum fd to actually trigger smash
+
+    private int smartFallTicksSinceClick = 0;
+
     private void tickMaceSpam(MinecraftClient client) {
         ItemStack mainHand = client.player.getInventory().getStack(
                 client.player.getInventory().getSelectedSlot());
         if (!(mainHand.getItem() instanceof MaceItem)) return;
 
-        PlayerEntity target = getLookedAtPlayer(client);
-        if (target == null) return;
-
-        int n = Math.max(1, s.maceSpamClicksPerTick);
-        for (int i = 0; i < n; i++) {
-            client.interactionManager.attackEntity(client.player, target);
+        if (s.maceSpamSmartFallClick) {
+            tickSmartFallClick(client);
+        } else {
+            // Original behavior: N clicks per tick at a player target
+            PlayerEntity target = getLookedAtPlayer(client);
+            if (target == null) return;
+            int n = Math.max(1, s.maceSpamClicksPerTick);
+            for (int i = 0; i < n; i++) {
+                client.interactionManager.attackEntity(client.player, target);
+            }
+            client.player.swingHand(Hand.MAIN_HAND);
         }
-        client.player.swingHand(Hand.MAIN_HAND);
+    }
+
+    private void tickSmartFallClick(MinecraftClient client) {
+        // Reset cadence when on the ground — fresh fall coming
+        if (client.player.isOnGround()) {
+            smartFallTicksSinceClick = 0;
+            return;
+        }
+
+        double fd = client.player.fallDistance;
+        if (fd <= 0) return;
+
+        PlayerEntity target = getLookedAtPlayer(client);
+        if (target == null) {
+            smartFallTicksSinceClick++;
+            return;
+        }
+
+        // Current downward speed (positive when falling)
+        double fallSpeed = -client.player.getVelocity().y;
+        if (fallSpeed < 0.05) {
+            // Going up or barely moving — no smash possible
+            smartFallTicksSinceClick++;
+            return;
+        }
+
+        // Time (in ticks) for fd to grow back to SMART_TARGET_FD after a smash reset
+        int interval = Math.max(1, (int) Math.ceil(SMART_TARGET_FD / fallSpeed));
+
+        smartFallTicksSinceClick++;
+
+        // Estimated smash damage at SMART_TARGET_FD (mace bonus = 4*min(fd,3))
+        double smashDmg = MACE_BASE_DAMAGE + 4.0 * Math.min(SMART_TARGET_FD, 3.0);
+        double expectedDurPerHit = smashDmg / UNBREAKING_3_FACTOR;
+        int hitsToBreak = (int) Math.ceil(SHIELD_BASE_DURABILITY / Math.max(0.1, expectedDurPerHit));
+
+        // Live action-bar readout so the player can see the calculation
+        String msg = String.format(
+                "Smart Fall: fd=%.1f  v=%.2f b/t  click every %d t  ~%d hits to break U3 shield",
+                fd, fallSpeed, interval, hitsToBreak);
+        client.player.sendMessage(Text.literal(msg), true);
+
+        // Click only if enough ticks have passed AND fd is actually past the smash threshold
+        if (smartFallTicksSinceClick >= interval && fd >= SMART_MIN_FD) {
+            client.interactionManager.attackEntity(client.player, target);
+            client.player.swingHand(Hand.MAIN_HAND);
+            smartFallTicksSinceClick = 0;
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

@@ -16,6 +16,11 @@ public final class ShieldMaceSettings {
     // Feature 3 — Mace Spam
     public boolean maceSpamEnabled = false;
     public int maceSpamClicksPerTick = 25;   // 1..100
+    /** Sub-toggle: while on, replaces 25-cps spam with a click rate computed from
+     *  the player's current fall speed, aiming for fd ≈ 3 per smash so each hit
+     *  is in the mace's max-bonus zone (4 dmg/block). Used to drain a U3 shield
+     *  while falling. */
+    public boolean maceSpamSmartFallClick = false;
 
     // Feature 4 — Pearl Wind-Charge Intercept
     public boolean pearlInterceptEnabled = false;
