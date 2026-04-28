@@ -42,3 +42,9 @@ id = "m8xvZCqkU5JD8sEJrBUT4"
 uri = "file://shield-mace-mod-1.7.0-release.zip"
 type = "unspecified"
 title = "Shield Mace Mod 1.7.0 — Silent Aim soft-assist (Minecraft 1.21.11)"
+
+[[outputs]]
+id = "tOqxOseeZt6FcsizrzPsf"
+uri = "file://shield-mace-mod-1.9.0.jar.tar.gz"
+type = "unspecified"
+title = "Shield Mace Mod 1.9.0 (Minecraft 1.21.11) — extract to get the .jar"

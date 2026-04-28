@@ -3,7 +3,7 @@
   "id": "shieldmacemod",
   "version": "${version}",
   "name": "Shield Mace Mod",
-  "description": "Five combat features (axe+mace combo, breach-mace swap on attack, mace spam with smart fall-click for U3 shield breaking, pearl wind-charge intercept, silent aim assist) configured through an in-game GUI opened with Right Shift. Each feature has a togglable on/off state, a rebindable shortcut key, and tunable settings.",
+  "description": "Combat utility client. Movement (Fly, Speed, Sprint, Step, Long Jump, NoFall, Jesus, Spider, Glide). Combat (KillAura, TriggerBot, AutoClicker, Criticals, Reach, Anti-Knockback, plus the original axe+mace combo / breach swap / mace spam / silent aim / mace kill). Player assistance (AutoArmor, AutoTotem, FastUse, InventoryMove, ChestStealer, Pearl Catch, Blink). Render (X-Ray, ESP, Tracers, Fullbright, NameTags, Hitboxes). Configured through the in-game GUI opened with Right Shift; every feature has a togglable on/off state and a rebindable shortcut key.",
   "authors": [],
   "contact": {},
   "license": "MIT",

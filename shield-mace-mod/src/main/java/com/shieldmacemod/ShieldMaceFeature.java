@@ -1,20 +1,31 @@
 package com.shieldmacemod;
 
+import net.minecraft.block.Block;
+import net.minecraft.block.Blocks;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.network.ClientPlayerEntity;
 import net.minecraft.enchantment.Enchantment;
 import net.minecraft.enchantment.EnchantmentHelper;
 import net.minecraft.enchantment.Enchantments;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.attribute.EntityAttributeInstance;
+import net.minecraft.entity.attribute.EntityAttributes;
 import net.minecraft.entity.mob.HostileEntity;
 import net.minecraft.entity.passive.PassiveEntity;
 import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.fluid.FluidState;
 import net.minecraft.item.AxeItem;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
 import net.minecraft.item.MaceItem;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.screen.GenericContainerScreenHandler;
+import net.minecraft.screen.ScreenHandler;
+import net.minecraft.screen.ShulkerBoxScreenHandler;
+import net.minecraft.screen.slot.Slot;
 import net.minecraft.screen.slot.SlotActionType;
 import net.minecraft.registry.RegistryKeys;
 import net.minecraft.registry.entry.RegistryEntry;
@@ -22,6 +33,7 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Hand;
 import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
+import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.math.Box;
 import net.minecraft.util.math.MathHelper;
 import net.minecraft.util.math.Vec3d;
@@ -29,6 +41,7 @@ import net.minecraft.util.math.Vec3d;
 import java.util.ArrayDeque;
 import java.util.Deque;
 import java.util.List;
+import java.util.function.BooleanSupplier;
 
 public class ShieldMaceFeature {
 
@@ -60,6 +73,19 @@ public class ShieldMaceFeature {
 
     // Kill-aura rate-limiter (ticks remaining until next attack)
     private int killAuraCooldown = 0;
+
+    // ── Misc rate-limiters / edge state for the simple toggles ──
+    private int triggerBotCooldown     = 0;
+    private double autoClickerAccumulator = 0; // fractional clicks per tick
+    private int autoArmorCooldown      = 0;
+    private int chestStealerCooldown   = 0;
+    private boolean longJumpJustJumped = false;
+    private boolean wasJumpPressed     = false;
+    private boolean stepHeightApplied  = false;
+    private boolean reachApplied       = false;
+    private double  appliedReachVal    = 0;
+    private double  appliedStepVal     = 0;
+    private Double  savedGamma         = null;
 
     // ── Blink state ──────────────────────────────────────────────────────
     // While blinkEnabled, every outgoing PlayerMoveC2SPacket is intercepted
@@ -178,12 +204,30 @@ public class ShieldMaceFeature {
         announce(client, s.flightEnabled ? "Flight: ON (double-tap space)" : "Flight: OFF");
     }
 
+    /**
+     * Generic toggle used by the keybind handler in {@link ShieldMaceMod} for
+     * features whose only action is "flip a boolean and tell the player". The
+     * caller passes a {@link Runnable} that flips the setting (so we don't
+     * have to know which field) and a {@link BooleanSupplier} that reads the
+     * new value back so we can show ON/OFF in chat.
+     */
+    public void toggleSimple(MinecraftClient client, String name,
+                              Runnable toggle, BooleanSupplier reader) {
+        toggle.run();
+        announce(client, name + ": " + (reader.getAsBoolean() ? "ON" : "OFF"));
+    }
+
     public void resetRuntimeState() {
         state                    = State.IDLE;
         delayTimer               = 0;
         cooldownTimer            = 0;
         wasAttackPressed         = false;
         smartFallTicksSinceClick = 0;
+        triggerBotCooldown       = 0;
+        autoClickerAccumulator   = 0;
+        autoArmorCooldown        = 0;
+        chestStealerCooldown     = 0;
+        longJumpJustJumped       = false;
     }
 
     private void announce(MinecraftClient client, String msg) {
@@ -215,6 +259,15 @@ public class ShieldMaceFeature {
         if (s.silentAimEnabled) {
             tickSilentAim(client);
         }
+
+        // ── Movement / combat / assist ticks (always evaluated; cheap when off)
+        tickMovement(client);
+        tickReach(client);
+        tickFullbright(client);
+        if (s.triggerBotEnabled)   tickTriggerBot(client);
+        if (s.autoClickerEnabled)  tickAutoClicker(client);
+        if (s.autoArmorEnabled)    tickAutoArmor(client);
+        if (s.chestStealerEnabled) tickChestStealer(client);
 
         // ── Click edge-detection (observe only — does NOT consume the key event)
         //     Tracked every tick so Height Smash can fire even when no other
@@ -664,6 +717,286 @@ public class ShieldMaceFeature {
 
         client.player.setYaw  ((float) (curYaw   + yawDelta   * strength));
         client.player.setPitch((float) (curPitch + pitchDelta * strength));
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Movement features (Speed / Sprint / Step / LongJump / Jesus / Spider / Glide)
+    // ─────────────────────────────────────────────────────────────────────────
+    private void tickMovement(MinecraftClient client) {
+        ClientPlayerEntity p = client.player;
+        if (p == null) return;
+
+        // ── Step (raise STEP_HEIGHT attribute) ──
+        EntityAttributeInstance stepAttr = p.getAttributeInstance(EntityAttributes.STEP_HEIGHT);
+        if (stepAttr != null) {
+            if (s.stepEnabled) {
+                double want = Math.max(1, Math.min(30, s.stepHeightTenths)) / 10.0;
+                if (!stepHeightApplied || want != appliedStepVal) {
+                    stepAttr.setBaseValue(want);
+                    appliedStepVal    = want;
+                    stepHeightApplied = true;
+                }
+            } else if (stepHeightApplied) {
+                // Vanilla default is 0.6 blocks for players
+                stepAttr.setBaseValue(0.6);
+                stepHeightApplied = false;
+            }
+        }
+
+        // ── Sprint (force sprint while moving forward) ──
+        if (s.sprintEnabled && p.input != null && p.input.playerInput != null
+                && p.input.playerInput.forward()
+                && !p.isUsingItem() && !p.horizontalCollision
+                && p.getHungerManager().getFoodLevel() > 0) {
+            p.setSprinting(true);
+        }
+
+        Vec3d v = p.getVelocity();
+        double vx = v.x, vy = v.y, vz = v.z;
+
+        // ── Speed (multiply horizontal velocity) ──
+        if (s.speedEnabled && p.input != null && p.input.playerInput != null) {
+            double mult = Math.max(11, Math.min(50, s.speedMultiplierTenths)) / 10.0;
+            var pi = p.input.playerInput;
+            boolean moving = pi.forward() || pi.backward() || pi.left() || pi.right();
+            if (moving) {
+                vx *= mult;
+                vz *= mult;
+            }
+        }
+
+        // ── Long Jump (boost horizontal velocity on jump) ──
+        boolean jumpPressed = p.input != null && p.input.playerInput != null && p.input.playerInput.jump();
+        if (s.longJumpEnabled && jumpPressed && !wasJumpPressed
+                && p.isOnGround() && !longJumpJustJumped) {
+            double mult = Math.max(11, Math.min(40, s.longJumpMultiplierTenths)) / 10.0;
+            vx *= mult;
+            vz *= mult;
+            longJumpJustJumped = true;
+        }
+        if (p.isOnGround() && !jumpPressed) {
+            longJumpJustJumped = false;
+        }
+        wasJumpPressed = jumpPressed;
+
+        // ── Glide (clamp downward velocity) ──
+        if (s.glideEnabled && vy < 0) {
+            double cap = -Math.max(1, Math.min(50, s.glideFallSpeedTenths)) / 100.0;
+            if (vy < cap) vy = cap;
+            // Cancel the accumulated fall distance so we don't take damage on landing
+            p.fallDistance = 0;
+        }
+
+        // ── Jesus (walk on liquids) ──
+        if (s.jesusEnabled && !jumpPressed) {
+            BlockPos below = BlockPos.ofFloored(p.getX(), p.getY() - 0.05, p.getZ());
+            FluidState fluid = client.world.getFluidState(below);
+            if (!fluid.isEmpty()) {
+                if (vy < 0) vy = 0;
+                p.setOnGround(true);
+                p.fallDistance = 0;
+            }
+        }
+
+        // ── Spider (climb walls on horizontal collision) ──
+        if (s.spiderEnabled && p.horizontalCollision) {
+            double climb = Math.max(1, Math.min(40, s.spiderClimbTenths)) / 100.0;
+            if (vy < climb) vy = climb;
+        }
+
+        if (vx != v.x || vy != v.y || vz != v.z) {
+            p.setVelocity(vx, vy, vz);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Reach (set the player's entity-interaction-range attribute)
+    // ─────────────────────────────────────────────────────────────────────────
+    private void tickReach(MinecraftClient client) {
+        ClientPlayerEntity p = client.player;
+        if (p == null) return;
+
+        EntityAttributeInstance attr =
+                p.getAttributeInstance(EntityAttributes.ENTITY_INTERACTION_RANGE);
+        if (attr == null) return;
+
+        if (s.reachEnabled) {
+            double want = Math.max(30, Math.min(80, s.reachBlocksTenths)) / 10.0;
+            if (!reachApplied || want != appliedReachVal) {
+                attr.setBaseValue(want);
+                appliedReachVal = want;
+                reachApplied    = true;
+            }
+        } else if (reachApplied) {
+            attr.setBaseValue(3.0);   // vanilla default
+            reachApplied = false;
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Fullbright — force gamma to 100 while enabled, restore on disable.
+    // The lightmap mixin in BackgroundRendererMixin handles fog brightening.
+    // ─────────────────────────────────────────────────────────────────────────
+    private void tickFullbright(MinecraftClient client) {
+        try {
+            var gammaOpt = client.options.getGamma();
+            if (s.fullbrightEnabled) {
+                if (savedGamma == null) {
+                    savedGamma = gammaOpt.getValue();
+                }
+                if (gammaOpt.getValue() < 15.0) {
+                    gammaOpt.setValue(100.0);
+                }
+            } else if (savedGamma != null) {
+                gammaOpt.setValue(savedGamma);
+                savedGamma = null;
+            }
+        } catch (Throwable ignored) {
+            // SimpleOption.setValue may clamp via its validator; ignore.
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // TriggerBot — attack the entity directly under the crosshair
+    // ─────────────────────────────────────────────────────────────────────────
+    private void tickTriggerBot(MinecraftClient client) {
+        if (triggerBotCooldown > 0) { triggerBotCooldown--; return; }
+        LivingEntity target = getLookedAtLiving(client);
+        if (target == null) return;
+        if (target instanceof PlayerEntity pe && (pe.isCreative() || pe.isSpectator())) return;
+        client.interactionManager.attackEntity(client.player, target);
+        client.player.swingHand(Hand.MAIN_HAND);
+        triggerBotCooldown = Math.max(1, s.triggerBotDelayTicks);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // AutoClicker — while the attack key is held, fire attacks at N CPS
+    // ─────────────────────────────────────────────────────────────────────────
+    private void tickAutoClicker(MinecraftClient client) {
+        if (!client.options.attackKey.isPressed()) {
+            autoClickerAccumulator = 0;
+            return;
+        }
+        double cps = Math.max(1, Math.min(40, s.autoClickerCps));
+        // 20 ticks/sec → clicks per tick = cps / 20
+        autoClickerAccumulator += cps / 20.0;
+        while (autoClickerAccumulator >= 1.0) {
+            autoClickerAccumulator -= 1.0;
+            LivingEntity target = getLookedAtLiving(client);
+            if (target != null) {
+                client.interactionManager.attackEntity(client.player, target);
+            }
+            client.player.swingHand(Hand.MAIN_HAND);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // AutoArmor — equip the strongest helmet/chest/legs/boots from inventory
+    // ─────────────────────────────────────────────────────────────────────────
+    private void tickAutoArmor(MinecraftClient client) {
+        if (autoArmorCooldown > 0) { autoArmorCooldown--; return; }
+        if (client.player.currentScreenHandler != client.player.playerScreenHandler) return;
+
+        ClientPlayerEntity p = client.player;
+        for (EquipmentSlot slot : new EquipmentSlot[]{
+                EquipmentSlot.HEAD, EquipmentSlot.CHEST,
+                EquipmentSlot.LEGS, EquipmentSlot.FEET}) {
+
+            ItemStack worn = p.getEquippedStack(slot);
+            int wornScore  = armorScore(worn, slot);
+            int bestIndex  = -1;
+            int bestScore  = wornScore;
+
+            for (int i = 0; i < 36; i++) {
+                ItemStack stack = p.getInventory().getStack(i);
+                int score = armorScore(stack, slot);
+                if (score > bestScore) { bestScore = score; bestIndex = i; }
+            }
+
+            if (bestIndex >= 0) {
+                // Slot id for the armor in the player screen handler:
+                //   HEAD=5, CHEST=6, LEGS=7, FEET=8
+                int armorSlotId = switch (slot) {
+                    case HEAD  -> 5;
+                    case CHEST -> 6;
+                    case LEGS  -> 7;
+                    case FEET  -> 8;
+                    default    -> -1;
+                };
+                if (armorSlotId < 0) continue;
+
+                int sourceSlotId = (bestIndex < 9) ? bestIndex + 36 : bestIndex;
+                int syncId = p.playerScreenHandler.syncId;
+
+                // Pickup new armor → place into armor slot → put any displaced
+                // armor back where the new piece used to be.
+                client.interactionManager.clickSlot(syncId, sourceSlotId, 0, SlotActionType.PICKUP, p);
+                client.interactionManager.clickSlot(syncId, armorSlotId,  0, SlotActionType.PICKUP, p);
+                if (!p.playerScreenHandler.getCursorStack().isEmpty()) {
+                    client.interactionManager.clickSlot(syncId, sourceSlotId, 0, SlotActionType.PICKUP, p);
+                }
+                autoArmorCooldown = Math.max(1, s.autoArmorDelayTicks);
+                return; // one piece per tick to stay polite
+            }
+        }
+
+        autoArmorCooldown = Math.max(1, s.autoArmorDelayTicks);
+    }
+
+    private static int armorScore(ItemStack stack, EquipmentSlot slot) {
+        if (stack.isEmpty()) return 0;
+        // 1.21.11 removed the public ArmorItem class entirely — any item
+        // can be equipment as long as it carries an EQUIPPABLE component.
+        // We use that component's slot to filter, then approximate the
+        // armor tier with the stack's max-damage (durability), which
+        // tracks tier ordering (leather < golden < chain < iron < diamond < netherite).
+        var eq = stack.get(net.minecraft.component.DataComponentTypes.EQUIPPABLE);
+        if (eq == null || eq.slot() != slot) return 0;
+        int dur = stack.getMaxDamage();
+        return Math.max(1, dur);
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // ChestStealer — shift-click everything out of any opened container
+    // ─────────────────────────────────────────────────────────────────────────
+    private void tickChestStealer(MinecraftClient client) {
+        if (chestStealerCooldown > 0) { chestStealerCooldown--; return; }
+        ScreenHandler sh = client.player.currentScreenHandler;
+        if (sh == client.player.playerScreenHandler) return;
+        if (!(sh instanceof GenericContainerScreenHandler)
+                && !(sh instanceof ShulkerBoxScreenHandler)) return;
+
+        // The container's own slots come first; the player inventory is
+        // appended after them. Shift-click container slots only.
+        int containerSlots;
+        if (sh instanceof GenericContainerScreenHandler g) {
+            containerSlots = g.getRows() * 9;
+        } else {
+            containerSlots = 27; // shulker
+        }
+
+        for (int i = 0; i < containerSlots && i < sh.slots.size(); i++) {
+            Slot slot = sh.slots.get(i);
+            if (!slot.hasStack()) continue;
+            client.interactionManager.clickSlot(
+                    sh.syncId, i, 0, SlotActionType.QUICK_MOVE, client.player);
+            chestStealerCooldown = Math.max(1, s.chestStealerDelayTicks);
+            return; // one slot per tick interval
+        }
+    }
+
+    // ── Block-classification helper used by the X-Ray render hook ────────────
+    public static boolean isOreBlock(Block block) {
+        return block == Blocks.COAL_ORE          || block == Blocks.DEEPSLATE_COAL_ORE
+            || block == Blocks.IRON_ORE          || block == Blocks.DEEPSLATE_IRON_ORE
+            || block == Blocks.COPPER_ORE        || block == Blocks.DEEPSLATE_COPPER_ORE
+            || block == Blocks.GOLD_ORE          || block == Blocks.DEEPSLATE_GOLD_ORE
+            || block == Blocks.REDSTONE_ORE      || block == Blocks.DEEPSLATE_REDSTONE_ORE
+            || block == Blocks.LAPIS_ORE         || block == Blocks.DEEPSLATE_LAPIS_ORE
+            || block == Blocks.DIAMOND_ORE       || block == Blocks.DEEPSLATE_DIAMOND_ORE
+            || block == Blocks.EMERALD_ORE       || block == Blocks.DEEPSLATE_EMERALD_ORE
+            || block == Blocks.NETHER_GOLD_ORE   || block == Blocks.NETHER_QUARTZ_ORE
+            || block == Blocks.ANCIENT_DEBRIS;
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────
